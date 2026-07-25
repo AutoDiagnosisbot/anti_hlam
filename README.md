@@ -12,6 +12,19 @@ docker compose up -d --build
 
 Open `http://localhost:8083`.
 
+## Current Deployment
+
+On `olegpc`, the project is deployed in `/home/oleg/anti_hlam` and runs through Docker Compose:
+
+```bash
+cd /home/oleg/anti_hlam
+docker compose ps
+docker compose logs -f app
+docker compose restart app
+```
+
+The app is exposed on port `8083`.
+
 ## Native Development
 
 You can also run PostgreSQL in Docker and run the Node server locally:

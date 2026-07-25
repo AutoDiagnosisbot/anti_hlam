@@ -13,7 +13,14 @@ Important folders:
 - `description.txt` - empty.
 - `test.js` - tiny JavaScript event-loop demo, not part of the app.
 
-The workspace root is now a Git repository with `origin` set to `git@github.com:AutoDiagnosisbot/anti_hlam.git`. The Angular app also has a nested `.git` directory and already contains many modified/untracked files, so do not assume existing changes are yours.
+The workspace root is a Git repository with `origin` set to `git@github.com:AutoDiagnosisbot/anti_hlam.git`. The old nested Angular `.git` directory was removed from `hash-tag-routing-app/` so the frontend is tracked as normal source files in the root repository. A backup archive was saved outside the workspace as `D:\projects\ifmo_hash-tag-routing-app_git_backup_20260725_152830.zip`.
+
+Current deployment target:
+
+- Host: `olegpc`
+- Path: `/home/oleg/anti_hlam`
+- Runtime: Docker Compose
+- App URL on the LAN: `http://192.168.0.131:8083`
 
 ## Frontend
 
