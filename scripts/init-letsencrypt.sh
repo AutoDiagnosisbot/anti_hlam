@@ -18,6 +18,28 @@ PUBLIC_HTTPS_PORT="${PUBLIC_HTTPS_PORT:-8443}"
 CERTBOT_STAGING="${CERTBOT_STAGING:-0}"
 RSA_KEY_SIZE="${RSA_KEY_SIZE:-4096}"
 
+cleanup_cert_paths() {
+  rm -rf "nginx/certbot/conf/live/$DOMAIN" \
+         "nginx/certbot/conf/archive/$DOMAIN" \
+         "nginx/certbot/conf/renewal/$DOMAIN.conf"
+}
+
+create_dummy_certificate() {
+  cleanup_cert_paths
+  mkdir -p "nginx/certbot/conf/live/$DOMAIN"
+
+  docker run --rm \
+    -e DOMAIN="$DOMAIN" \
+    -v "$PWD/nginx/certbot/conf:/etc/letsencrypt" \
+    alpine:3.20 sh -c '
+      apk add --no-cache openssl >/dev/null
+      openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+        -keyout "/etc/letsencrypt/live/$DOMAIN/privkey.pem" \
+        -out "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" \
+        -subj "/CN=$DOMAIN"
+    '
+}
+
 if [ -z "$DOMAIN" ] || [ -z "$LETSENCRYPT_EMAIL" ]; then
   echo "Set DOMAIN and LETSENCRYPT_EMAIL in .env before running this script." >&2
   exit 1
@@ -45,46 +67,50 @@ esac
 mkdir -p nginx/certbot/conf nginx/certbot/www nginx/certbot/logs
 
 echo "Creating temporary self-signed certificate for $DOMAIN..."
-rm -rf "nginx/certbot/conf/live/$DOMAIN" \
-       "nginx/certbot/conf/archive/$DOMAIN" \
-       "nginx/certbot/conf/renewal/$DOMAIN.conf"
-mkdir -p "nginx/certbot/conf/live/$DOMAIN"
-
-docker run --rm \
-  -e DOMAIN="$DOMAIN" \
-  -v "$PWD/nginx/certbot/conf:/etc/letsencrypt" \
-  alpine:3.20 sh -c '
-    apk add --no-cache openssl >/dev/null
-    openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
-      -keyout "/etc/letsencrypt/live/$DOMAIN/privkey.pem" \
-      -out "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" \
-      -subj "/CN=$DOMAIN"
-  '
+create_dummy_certificate
 
 echo "Starting AntiHlam app and nginx..."
 docker compose --profile https up -d --build postgres app nginx
 
-echo "Removing temporary certificate before requesting the real one..."
-rm -rf "nginx/certbot/conf/live/$DOMAIN" \
-       "nginx/certbot/conf/archive/$DOMAIN" \
-       "nginx/certbot/conf/renewal/$DOMAIN.conf"
+probe_token="anti-hlam-probe-$(date +%s)"
+probe_dir="nginx/certbot/www/.well-known/acme-challenge"
+mkdir -p "$probe_dir"
+printf 'ok\n' > "$probe_dir/$probe_token"
 
-staging_arg=""
+if ! curl -fsS "http://127.0.0.1/.well-known/acme-challenge/$probe_token" | grep -q '^ok$'; then
+  echo "nginx is not serving local Let's Encrypt challenge files on port 80." >&2
+  rm -f "$probe_dir/$probe_token"
+  exit 1
+fi
+
+rm -f "$probe_dir/$probe_token"
+
+echo "Removing temporary certificate before requesting the real one..."
+cleanup_cert_paths
+
+certbot_args=(
+  certonly
+  --webroot
+  --webroot-path /var/www/certbot
+  --email "$LETSENCRYPT_EMAIL"
+  --domain "$DOMAIN"
+  --rsa-key-size "$RSA_KEY_SIZE"
+  --agree-tos
+  --no-eff-email
+  --force-renewal
+)
+
 if [ "$CERTBOT_STAGING" = "1" ]; then
-  staging_arg="--staging"
+  certbot_args+=(--staging)
 fi
 
 echo "Requesting Let's Encrypt certificate for $DOMAIN..."
-docker compose --profile https run --rm certbot certonly \
-  --webroot \
-  --webroot-path /var/www/certbot \
-  --email "$LETSENCRYPT_EMAIL" \
-  --domain "$DOMAIN" \
-  --rsa-key-size "$RSA_KEY_SIZE" \
-  --agree-tos \
-  --no-eff-email \
-  --force-renewal \
-  $staging_arg
+if ! docker compose --profile https run --rm certbot "${certbot_args[@]}"; then
+  echo "Certbot failed. Restoring temporary certificate so nginx can keep starting." >&2
+  create_dummy_certificate
+  docker compose restart nginx >/dev/null || true
+  exit 1
+fi
 
 echo "Reloading nginx..."
 docker compose exec nginx nginx -s reload
