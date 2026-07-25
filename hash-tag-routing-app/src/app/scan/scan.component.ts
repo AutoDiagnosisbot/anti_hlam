@@ -95,6 +95,16 @@ export class ScanComponent implements OnDestroy {
   }
 
   startScan() {
+    if (!window.isSecureContext) {
+      this.message = 'Камера доступна только через HTTPS или localhost. Откройте приложение по защищенному адресу.';
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      this.message = 'Этот браузер не дает приложению доступ к камере.';
+      return;
+    }
+
     setTimeout(() => {
       if (!this.cameraInitialized) {
         QrScanner.WORKER_PATH = './assets/js/qr-scanner-worker.min.js';
@@ -115,13 +125,19 @@ export class ScanComponent implements OnDestroy {
         return;
       }
 
-      this.scanner.start().then(() => {
-        QrScanner.listCameras(true).then((cameras: QrScanner.Camera[]) => {
-          this.camList = cameras;
+      this.scanner.start()
+        .then(() => {
+          QrScanner.listCameras(true).then((cameras: QrScanner.Camera[]) => {
+            this.camList = cameras;
+          });
+          this.scanOn = true;
+          this.message = '';
+        })
+        .catch((err: Error) => {
+          this.scanOn = false;
+          this.message = this.cameraErrorMessage(err);
+          this.cd.markForCheck();
         });
-      });
-      this.scanOn = true;
-      this.message = '';
     }, 0);
   }
 
@@ -140,5 +156,17 @@ export class ScanComponent implements OnDestroy {
     this.cameraId++;
     this.cameraId = this.cameraId % this.camList.length;
     this.scanner.setCamera(this.camList[this.cameraId].id);
+  }
+
+  private cameraErrorMessage(err: Error): string {
+    if (err?.name === 'NotAllowedError' || err?.name === 'SecurityError') {
+      return 'Браузер заблокировал камеру. Проверьте разрешение камеры и откройте приложение через HTTPS.';
+    }
+
+    if (err?.name === 'NotFoundError') {
+      return 'Камера не найдена.';
+    }
+
+    return 'Не удалось открыть камеру. Проверьте разрешения браузера и HTTPS.';
   }
 }

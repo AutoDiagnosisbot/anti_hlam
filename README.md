@@ -25,6 +25,10 @@ docker compose restart app
 
 The app is exposed on port `8083`.
 
+Camera scanning on mobile browsers requires a secure context. `http://192.168...`
+works for the app UI, but camera access needs `https://...` or a browser-specific
+development override.
+
 ## Native Development
 
 You can also run PostgreSQL in Docker and run the Node server locally:
