@@ -4,7 +4,7 @@
   <section class="toolbar">
     <div>
       <h1>Поиск</h1>
-      <p>Найдите вещь или место по QR-коду.</p>
+      <p>Найдите вещь или место по нашему или заводскому QR-коду.</p>
     </div>
     <button mat-raised-button color="primary" type="button" *ngIf="!scanOn" (click)="startScan()">
       Сканировать
@@ -24,7 +24,7 @@
   <section class="manual-panel">
     <mat-form-field appearance="outline">
       <mat-label>QR-код</mat-label>
-      <input matInput placeholder="place:123 или item:123" [formControl]="qrFormControl">
+      <input matInput placeholder="place:123, item:123 или заводской QR" [formControl]="qrFormControl">
     </mat-form-field>
     <button mat-raised-button color="primary" type="button" (click)="findTypedQr()" [disabled]="loading">
       Найти

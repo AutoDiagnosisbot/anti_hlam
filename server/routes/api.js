@@ -431,7 +431,7 @@ router.post('/resolve_qr', asyncHandler(async function resolveQr(req, res) {
     status: 'ok',
     result: true,
     found: false,
-    type: qrString.indexOf('place:') === 0 ? 'place' : qrString.indexOf('item:') === 0 ? 'item' : 'unknown',
+    type: qrString.indexOf('place:') === 0 ? 'place' : 'item',
     qr_string: qrString,
   });
 }));
@@ -483,8 +483,13 @@ router.post('/save_item', asyncHandler(async function saveItem(req, res) {
   const placeQrString = cleanText(req.body.place_qr_string);
   const placeId = Number(req.body.place_id || 0);
 
-  if (qrString.indexOf('item:') !== 0) {
-    error(res, 400, 'Item QR must start with item:.');
+  if (!qrString) {
+    error(res, 400, 'Item QR is required.');
+    return;
+  }
+
+  if (qrString.indexOf('place:') === 0) {
+    error(res, 400, 'QR codes that start with place: are reserved for places.');
     return;
   }
 

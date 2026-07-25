@@ -141,8 +141,10 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
           }
         }
 
-        if (this.mode === 'unknown') {
-          this.message = 'Этот QR не похож на place:* или item:*.';
+        if (!response.found && this.mode === 'item' && qrString.indexOf('item:') !== 0) {
+          this.message = 'Это новый заводской QR. Его можно привязать как вещь.';
+        } else if (this.mode === 'unknown') {
+          this.message = 'Этот QR можно привязать как вещь.';
         }
       },
       error: (response: { error?: ApiResponse }) => {

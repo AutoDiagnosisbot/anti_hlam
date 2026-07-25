@@ -65,6 +65,7 @@ Implementation notes:
 - Auth guard checks `localStorage.session_id` and redirects to `/login`.
 - `GeneratorComponent` creates printable batches of `place:*` and `item:*` QR strings.
 - `BindingComponent` can scan or manually accept QR payloads, detect places/items, and save them through the backend.
+- `place:*` remains reserved for places; items can use either `item:*` labels or arbitrary factory QR payloads.
 - `ListItemsComponent` loads the catalog from the backend and supports deleting places/items.
 - `ScanComponent` resolves a QR into a place/item lookup result.
 

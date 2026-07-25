@@ -55,6 +55,6 @@ Uploaded photos are stored in the Docker volume `anti_hlam_uploads` and served f
 - Create an account on the login screen.
 - Print QR codes in the QR section.
 - Bind `place:*` codes as places.
-- Bind `item:*` codes as items and choose their place.
+- Bind `item:*` codes or factory QR codes as items and choose their place.
 - Attach or replace photos from the binding screen or catalog.
 - Use the catalog and search screens to find items and places.
