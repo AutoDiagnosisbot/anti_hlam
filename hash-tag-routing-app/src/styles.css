@@ -1,0 +1,35 @@
+html,
+body {
+  min-height: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f6f7f2;
+  color: #202124;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
+
+.hidden {
+  display: none;
+}
+
+@media print {
+  body {
+    background: #ffffff;
+  }
+
+  .unprint {
+    display: none;
+  }
+}

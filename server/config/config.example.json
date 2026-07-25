@@ -1,0 +1,3 @@
+{
+  "note": "Runtime configuration now comes from environment variables. Set DATABASE_URL or use docker-compose.yml for PostgreSQL."
+}

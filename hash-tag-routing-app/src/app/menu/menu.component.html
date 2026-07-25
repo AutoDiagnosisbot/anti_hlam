@@ -1,0 +1,15 @@
+<header class="app-menu">
+  <div class="identity">
+    <strong>АнтиХлам</strong>
+    <span>{{ api.username }}</span>
+  </div>
+
+  <mat-button-toggle-group name="section" aria-label="Раздел" [(value)]="page">
+    <mat-button-toggle value="list-items" (click)="action('list-items')">Каталог</mat-button-toggle>
+    <mat-button-toggle value="binding" (click)="action('binding')">Привязка</mat-button-toggle>
+    <mat-button-toggle value="scan" (click)="action('scan')">Поиск</mat-button-toggle>
+    <mat-button-toggle value="generator" (click)="action('generator')">QR</mat-button-toggle>
+  </mat-button-toggle-group>
+
+  <button class="logout-button" type="button" (click)="logout()">Выйти</button>
+</header>

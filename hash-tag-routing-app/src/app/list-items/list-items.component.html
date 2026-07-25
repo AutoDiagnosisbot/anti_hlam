@@ -1,0 +1,76 @@
+<app-menu></app-menu>
+
+<main class="page">
+  <section class="toolbar">
+    <div>
+      <h1>Каталог</h1>
+      <p>Места, вещи и QR-идентификаторы текущего пользователя</p>
+    </div>
+    <button class="secondary-button" type="button" (click)="load()" [disabled]="loading">
+      Обновить
+    </button>
+  </section>
+
+  <p class="message" *ngIf="message">{{ message }}</p>
+  <p class="message" *ngIf="loading">Загружаю каталог...</p>
+
+  <section class="empty-state" *ngIf="!loading && places.length === 0 && unplacedItems.length === 0">
+    <h2>Каталог пока пуст</h2>
+    <p>Сначала распечатайте QR-коды, затем перейдите в привязку и сохраните место или вещь.</p>
+  </section>
+
+  <section class="place-list" *ngIf="places.length > 0">
+    <article class="place-row" *ngFor="let place of places">
+      <div class="place-head">
+        <div>
+          <h2>{{ place.name }}</h2>
+          <p>{{ place.qr_string }}</p>
+        </div>
+        <button class="danger-button" type="button" (click)="deletePlace(place)">Удалить</button>
+      </div>
+
+      <table *ngIf="place.items.length > 0">
+        <thead>
+          <tr>
+            <th>Вещь</th>
+            <th>QR</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of place.items">
+            <td>{{ item.name }}</td>
+            <td><code>{{ item.qr_string }}</code></td>
+            <td class="action-cell">
+              <button class="link-button" type="button" (click)="deleteItem(item)">Удалить</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p class="muted" *ngIf="place.items.length === 0">В этом месте пока нет вещей.</p>
+    </article>
+  </section>
+
+  <section class="unplaced" *ngIf="unplacedItems.length > 0">
+    <h2>Вещи без места</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Вещь</th>
+          <th>QR</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of unplacedItems">
+          <td>{{ item.name }}</td>
+          <td><code>{{ item.qr_string }}</code></td>
+          <td class="action-cell">
+            <button class="link-button" type="button" (click)="deleteItem(item)">Удалить</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</main>

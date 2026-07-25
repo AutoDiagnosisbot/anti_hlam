@@ -1,0 +1,53 @@
+<section class="login-page">
+  <form class="login-panel" (ngSubmit)="login()">
+    <div class="brand">
+      <span class="brand-mark">AH</span>
+      <div>
+        <h1>АнтиХлам</h1>
+        <p>Каталог мест и вещей по QR-кодам</p>
+      </div>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Логин</mat-label>
+      <input
+        matInput
+        autocomplete="username"
+        [formControl]="usernameFormControl"
+        [errorStateMatcher]="matcher"
+        placeholder="oleg"
+      >
+      @if (usernameFormControl.hasError('required')) {
+        <mat-error>Логин обязателен</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Пароль</mat-label>
+      <input
+        matInput
+        type="password"
+        autocomplete="current-password"
+        [formControl]="passwordFormControl"
+        [errorStateMatcher]="matcher"
+        placeholder="Пароль"
+      >
+      @if (passwordFormControl.hasError('required')) {
+        <mat-error>Пароль обязателен</mat-error>
+      }
+    </mat-form-field>
+
+    @if (message) {
+      <p class="message">{{ message }}</p>
+    }
+
+    <div class="actions">
+      <button mat-raised-button color="primary" type="submit" [disabled]="loading">
+        Войти
+      </button>
+      <button mat-stroked-button color="primary" type="button" (click)="register()" [disabled]="loading">
+        Создать аккаунт
+      </button>
+    </div>
+  </form>
+</section>

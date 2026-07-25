@@ -1,0 +1,55 @@
+.app-menu {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #dfe4dc;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.identity {
+  min-width: 150px;
+  display: grid;
+  gap: 2px;
+}
+
+.identity strong {
+  color: #202124;
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.identity span {
+  min-height: 18px;
+  color: #68736d;
+  font-size: 13px;
+}
+
+.logout-button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #c8d0cb;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #202124;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  border-color: #2f7a65;
+}
+
+@media (max-width: 760px) {
+  .app-menu {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .identity {
+    min-width: 0;
+  }
+}

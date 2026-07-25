@@ -1,0 +1,54 @@
+вадПожалуйста напиши апи используя node js, как серрвер библиотека express.
+Все принимаемые данные будут в body, application/json, а значит соответственно мнужно использовать body-parser, bodyParser.json().
+В отдельных файлах будет лежать сам сервер, и каждый обработчик метода API в отдельном файле.
+Метод /authorize - для авторизации пользователя. На вход принимает username / password, а выдает session_id.
+Метод /register - для регистрации пользователя. На Вход принимает username / password, выдает result: true либо false.
+Метод /get_full_list - для выдачи польной информации о местах и предметах. На вход принимает session_id, а выдает список обектов этого подльзователя. например:
+[{place_name:”полка 1”, place_id: 123, item_name: “ножницы”, item_id: 12},
+{place_name:”полка 1”, place_id: 123, item_name: “скотч”, item_id: 13}]
+
+База данных mysql, структура данных следующая:
+
+#Таблица с пользователями
+CREATE TABLE IF NOT EXISTS `users` (
+  `id` INT NOT NULL AUTO_INCREMENT, #идентификатор пользователя
+  `username` VARCHAR(45) NULL, #логин пользователя
+  `password` VARCHAR(45) NULL, #пароль пользователя
+  PRIMARY KEY (`id`)
+)
+
+# Таблица с местами
+CREATE TABLE IF NOT EXISTS `places` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(45) NULL, #Название места
+  `qr_string` VARCHAR(45) NULL, # Уникальная строка привязанная к этому месту
+  `user_id` INT NULL, # Связка с пользователем
+  PRIMARY KEY (`id`),
+  INDEX `places_user_rel_idx` (`user_id` ASC) VISIBLE,
+  CONSTRAINT `places_user_rel`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+)
+
+#таблица с предметами
+CREATE TABLE IF NOT EXISTS `items` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(45) NULL, # Название предмета
+  `qr_string` VARCHAR(45) NULL, # Уникальная строка привязанная к этому предмету
+  `place_id` INT NULL, # Связка с местом
+  `user_id` INT NULL, # Связка с пользователем
+  INDEX `item_places_rel_idx` (`place_id` ASC) VISIBLE,
+  INDEX `user_item_rel_idx` (`user_id` ASC) VISIBLE,
+  CONSTRAINT `user_item_rel`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `item_places_rel`
+    FOREIGN KEY (`place_id`)
+    REFERENCES `places` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+)

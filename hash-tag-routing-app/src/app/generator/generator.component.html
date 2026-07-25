@@ -1,0 +1,34 @@
+<app-menu class="unprint"></app-menu>
+
+<main class="page">
+  <section class="toolbar unprint">
+    <div>
+      <h1>Генератор QR</h1>
+      <p>Распечатайте коды, наклейте их на места и вещи, затем привяжите в приложении.</p>
+    </div>
+    <div class="actions">
+      <button mat-stroked-button color="primary" type="button" (click)="generate()">Новая партия</button>
+      <button mat-raised-button color="primary" type="button" (click)="print()">Печать</button>
+    </div>
+  </section>
+
+  <section class="print-section">
+    <h2>Места</h2>
+    <div class="qr-grid">
+      <div class="qr-label" *ngFor="let item of places">
+        <qrcode [qrdata]="item" [width]="86" [errorCorrectionLevel]="'H'"></qrcode>
+        <span>{{ item }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="print-section">
+    <h2>Вещи</h2>
+    <div class="qr-grid">
+      <div class="qr-label" *ngFor="let item of items">
+        <qrcode [qrdata]="item" [width]="76" [errorCorrectionLevel]="'H'"></qrcode>
+        <span>{{ item }}</span>
+      </div>
+    </div>
+  </section>
+</main>

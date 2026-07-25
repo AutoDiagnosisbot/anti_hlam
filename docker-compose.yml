@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: anti_hlam_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-anti_hlam}
+      POSTGRES_USER: ${POSTGRES_USER:-anti_hlam}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-anti_hlam_dev_password}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - anti_hlam_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build:
+      context: .
+    container_name: anti_hlam_app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 8083
+      DATABASE_URL: postgres://${POSTGRES_USER:-anti_hlam}:${POSTGRES_PASSWORD:-anti_hlam_dev_password}@postgres:5432/${POSTGRES_DB:-anti_hlam}
+    ports:
+      - "8083:8083"
+
+volumes:
+  anti_hlam_pgdata:

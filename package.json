@@ -1,0 +1,10 @@
+{
+  "name": "ifmo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix hash-tag-routing-app run build",
+    "start": "npm --prefix server start"
+  },
+  "dependencies": {}
+}

@@ -1,0 +1,94 @@
+<app-menu></app-menu>
+
+<main class="page">
+  <section class="toolbar">
+    <div>
+      <h1>Привязка QR</h1>
+      <p>Сканируйте код места или вещи, затем сохраните название и размещение.</p>
+    </div>
+    <button mat-raised-button color="primary" type="button" *ngIf="!scanOn" (click)="startScan()">
+      Сканировать
+    </button>
+    <button mat-stroked-button color="primary" type="button" *ngIf="scanOn" (click)="stopScan()">
+      Остановить
+    </button>
+  </section>
+
+  <section class="scanner" [class.hidden]="!scanOn">
+    <div class="camera-actions">
+      <button mat-stroked-button color="primary" type="button" (click)="switchCamera()">Сменить камеру</button>
+      <button mat-stroked-button color="primary" type="button" (click)="toggleFlash()">Подсветка</button>
+    </div>
+    <video #video></video>
+  </section>
+
+  <section class="manual-panel">
+    <mat-form-field appearance="outline">
+      <mat-label>QR-код</mat-label>
+      <input matInput placeholder="place:123 или item:123" [formControl]="qrFormControl">
+    </mat-form-field>
+    <button mat-raised-button color="primary" type="button" (click)="resolveTypedQr()" [disabled]="loading">
+      Проверить
+    </button>
+  </section>
+
+  <p class="message" *ngIf="message">{{ message }}</p>
+  <p class="message" *ngIf="loading">Обрабатываю...</p>
+
+  <section class="result-panel" *ngIf="mode === 'place'">
+    <div class="result-head">
+      <h2>{{ existingPlace ? 'Место найдено' : 'Новое место' }}</h2>
+      <code>{{ currentQr }}</code>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Название места</mat-label>
+      <input matInput placeholder="Шкаф в прихожей" [formControl]="nameFormControl">
+    </mat-form-field>
+
+    <button mat-raised-button color="primary" type="button" (click)="savePlace()" [disabled]="loading">
+      Сохранить место
+    </button>
+
+    <table *ngIf="existingPlace && existingPlace.items.length > 0">
+      <thead>
+        <tr>
+          <th>Вещи в этом месте</th>
+          <th>QR</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of existingPlace.items">
+          <td>{{ item.name }}</td>
+          <td><code>{{ item.qr_string }}</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="result-panel" *ngIf="mode === 'item'">
+    <div class="result-head">
+      <h2>{{ existingItem ? 'Вещь найдена' : 'Новая вещь' }}</h2>
+      <code>{{ currentQr }}</code>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Название вещи</mat-label>
+      <input matInput placeholder="Ножницы" [formControl]="nameFormControl">
+    </mat-form-field>
+
+    <label class="select-label" for="placeSelect">Место</label>
+    <select id="placeSelect" [formControl]="placeFormControl">
+      <option [ngValue]="null" disabled>Выберите место</option>
+      <option *ngFor="let place of places" [ngValue]="place.id">{{ place.name }}</option>
+    </select>
+
+    <p class="muted" *ngIf="places.length === 0">
+      Сначала привяжите хотя бы одно место.
+    </p>
+
+    <button mat-raised-button color="primary" type="button" (click)="saveItem()" [disabled]="loading || places.length === 0">
+      Сохранить вещь
+    </button>
+  </section>
+</main>

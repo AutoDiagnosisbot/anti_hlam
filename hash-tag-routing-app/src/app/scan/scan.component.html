@@ -1,0 +1,75 @@
+<app-menu></app-menu>
+
+<main class="page">
+  <section class="toolbar">
+    <div>
+      <h1>Поиск</h1>
+      <p>Найдите вещь или место по QR-коду.</p>
+    </div>
+    <button mat-raised-button color="primary" type="button" *ngIf="!scanOn" (click)="startScan()">
+      Сканировать
+    </button>
+    <button mat-stroked-button color="primary" type="button" *ngIf="scanOn" (click)="stopScan()">
+      Остановить
+    </button>
+  </section>
+
+  <section class="scanner" [class.hidden]="!scanOn">
+    <div class="camera-actions">
+      <button mat-stroked-button color="primary" type="button" (click)="switchCamera()">Сменить камеру</button>
+    </div>
+    <video #video></video>
+  </section>
+
+  <section class="manual-panel">
+    <mat-form-field appearance="outline">
+      <mat-label>QR-код</mat-label>
+      <input matInput placeholder="place:123 или item:123" [formControl]="qrFormControl">
+    </mat-form-field>
+    <button mat-raised-button color="primary" type="button" (click)="findTypedQr()" [disabled]="loading">
+      Найти
+    </button>
+  </section>
+
+  <p class="message" *ngIf="message">{{ message }}</p>
+  <p class="message" *ngIf="loading">Ищу...</p>
+
+  <section class="result-panel" *ngIf="result && result.found && result.type === 'place' && result.place">
+    <h2>{{ result.place.name }}</h2>
+    <p><code>{{ result.place.qr_string }}</code></p>
+
+    <table *ngIf="result.place.items.length > 0">
+      <thead>
+        <tr>
+          <th>Вещь</th>
+          <th>QR</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of result.place.items">
+          <td>{{ item.name }}</td>
+          <td><code>{{ item.qr_string }}</code></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="muted" *ngIf="result.place.items.length === 0">В этом месте пока нет вещей.</p>
+  </section>
+
+  <section class="result-panel" *ngIf="result && result.found && result.type === 'item' && result.item">
+    <h2>{{ result.item.name }}</h2>
+    <dl>
+      <div>
+        <dt>QR вещи</dt>
+        <dd><code>{{ result.item.qr_string }}</code></dd>
+      </div>
+      <div>
+        <dt>Место</dt>
+        <dd>{{ result.item.place ? result.item.place.name : 'Не указано' }}</dd>
+      </div>
+      <div *ngIf="result.item.place">
+        <dt>QR места</dt>
+        <dd><code>{{ result.item.place.qr_string }}</code></dd>
+      </div>
+    </dl>
+  </section>
+</main>
