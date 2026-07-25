@@ -11,7 +11,6 @@ import {
 } from '@angular/core';
 import {NgFor, NgIf} from "@angular/common";
 import {MenuComponent} from "../menu/menu.component";
-import QrScanner from 'qr-scanner';
 import {MatButtonModule} from "@angular/material/button";
 import {MatInputModule} from "@angular/material/input";
 import {MatFormFieldModule} from "@angular/material/form-field";
@@ -26,6 +25,7 @@ import {
   SaveItemResponse,
   SavePlaceResponse
 } from "../services/api.service";
+import {WideCodeCamera, WideCodeScanner} from "../services/wide-code-scanner";
 
 type BindingMode = 'idle' | 'place' | 'item' | 'unknown';
 
@@ -53,10 +53,10 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
   nameFormControl = new FormControl('', [Validators.required]);
   placeFormControl = new FormControl<number | null>(null);
 
-  scanner: QrScanner | null = null;
+  scanner: WideCodeScanner | null = null;
   scanOn = false;
   cameraId = 0;
-  camList: QrScanner.Camera[] = [];
+  camList: WideCodeCamera[] = [];
   cameraInitialized = false;
 
   mode: BindingMode = 'idle';
@@ -104,7 +104,7 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
   processResult(result: string) {
     const qrString = result.trim();
     if (!qrString) {
-      this.message = 'Введите или отсканируйте QR-код.';
+      this.message = 'Введите или отсканируйте код.';
       return;
     }
 
@@ -139,9 +139,9 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
         }
 
         if (!response.found && this.mode === 'item' && qrString.indexOf('item:') !== 0) {
-          this.message = 'Это новый заводской QR. Его можно привязать как вещь.';
+          this.message = 'Это новый заводской код. Его можно привязать как вещь.';
         } else if (this.mode === 'unknown') {
-          this.message = 'Этот QR можно привязать как вещь.';
+          this.message = 'Этот код можно привязать как вещь.';
         }
       },
       error: (response: { error?: ApiResponse }) => {
@@ -294,16 +294,11 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
 
     setTimeout(() => {
       if (!this.cameraInitialized) {
-        QrScanner.WORKER_PATH = './assets/js/qr-scanner-worker.min.js';
-        this.scanner = new QrScanner(this.videoElem.nativeElement, (result: string | { data: string }) => {
-          const qrText = typeof result === 'string' ? result : result.data;
+        this.scanner = new WideCodeScanner(this.videoElem.nativeElement, (qrText: string) => {
           this.ngZone.run(() => {
             this.stopScan();
             this.processResult(qrText);
           });
-        }, {
-          highlightScanRegion: true,
-          highlightCodeOutline: true,
         });
         this.cameraInitialized = true;
       }
@@ -312,10 +307,13 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
         return;
       }
 
-      this.scanner.start()
+      this.scanner.start(this.camList[this.cameraId]?.id)
         .then(() => {
-          QrScanner.listCameras(true).then((cameras: QrScanner.Camera[]) => {
+          WideCodeScanner.listCameras().then((cameras: WideCodeCamera[]) => {
             this.camList = cameras;
+            if (!this.camList[this.cameraId]) {
+              this.cameraId = 0;
+            }
           });
           this.scanOn = true;
           this.message = '';
@@ -343,12 +341,27 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.cameraId++;
     this.cameraId = this.cameraId % this.camList.length;
-    this.scanner.setCamera(this.camList[this.cameraId].id);
+    if (!this.scanOn) {
+      return;
+    }
+
+    this.scanner.start(this.camList[this.cameraId].id)
+      .catch((err: Error) => {
+        this.scanOn = false;
+        this.message = this.cameraErrorMessage(err);
+        this.cd.markForCheck();
+      });
   }
 
   toggleFlash() {
     if (this.scanner) {
-      this.scanner.toggleFlash();
+      this.scanner.toggleFlash().then((enabled) => {
+        if (!enabled) {
+          this.message = 'Подсветка недоступна для этой камеры или браузера.';
+        }
+      }).catch(() => {
+        this.message = 'Не удалось переключить подсветку.';
+      });
     }
   }
 

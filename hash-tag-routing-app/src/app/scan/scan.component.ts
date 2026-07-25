@@ -12,8 +12,8 @@ import {MatButtonModule} from "@angular/material/button";
 import {MatFormFieldModule} from "@angular/material/form-field";
 import {MatInputModule} from "@angular/material/input";
 import {FormControl, ReactiveFormsModule, Validators} from "@angular/forms";
-import QrScanner from "qr-scanner";
 import {ApiResponse, ApiService, ResolveQrResponse} from "../services/api.service";
+import {WideCodeCamera, WideCodeScanner} from "../services/wide-code-scanner";
 
 @Component({
   selector: 'app-scan',
@@ -34,11 +34,11 @@ export class ScanComponent implements OnDestroy {
   @ViewChild('video') videoElem!: ElementRef<HTMLVideoElement>;
 
   qrFormControl = new FormControl('', [Validators.required]);
-  scanner: QrScanner | null = null;
+  scanner: WideCodeScanner | null = null;
   scanOn = false;
   cameraInitialized = false;
   cameraId = 0;
-  camList: QrScanner.Camera[] = [];
+  camList: WideCodeCamera[] = [];
   loading = false;
   message = '';
   result: ResolveQrResponse | null = null;
@@ -64,7 +64,7 @@ export class ScanComponent implements OnDestroy {
   findQr(qrString: string) {
     const cleanQr = qrString.trim();
     if (!cleanQr) {
-      this.message = 'Введите или отсканируйте QR-код.';
+      this.message = 'Введите или отсканируйте код.';
       return;
     }
 
@@ -80,7 +80,7 @@ export class ScanComponent implements OnDestroy {
         if (response.status !== 'ok') {
           this.message = response.description || 'Не удалось выполнить поиск.';
         } else if (!response.found) {
-          this.message = 'Такой QR пока не привязан.';
+          this.message = 'Такой код пока не привязан.';
         }
       },
       error: (response: { error?: ApiResponse }) => {
@@ -107,16 +107,11 @@ export class ScanComponent implements OnDestroy {
 
     setTimeout(() => {
       if (!this.cameraInitialized) {
-        QrScanner.WORKER_PATH = './assets/js/qr-scanner-worker.min.js';
-        this.scanner = new QrScanner(this.videoElem.nativeElement, (result: string | { data: string }) => {
-          const qrText = typeof result === 'string' ? result : result.data;
+        this.scanner = new WideCodeScanner(this.videoElem.nativeElement, (qrText: string) => {
           this.ngZone.run(() => {
             this.stopScan();
             this.findQr(qrText);
           });
-        }, {
-          highlightScanRegion: true,
-          highlightCodeOutline: true,
         });
         this.cameraInitialized = true;
       }
@@ -125,10 +120,13 @@ export class ScanComponent implements OnDestroy {
         return;
       }
 
-      this.scanner.start()
+      this.scanner.start(this.camList[this.cameraId]?.id)
         .then(() => {
-          QrScanner.listCameras(true).then((cameras: QrScanner.Camera[]) => {
+          WideCodeScanner.listCameras().then((cameras: WideCodeCamera[]) => {
             this.camList = cameras;
+            if (!this.camList[this.cameraId]) {
+              this.cameraId = 0;
+            }
           });
           this.scanOn = true;
           this.message = '';
@@ -155,7 +153,16 @@ export class ScanComponent implements OnDestroy {
     }
     this.cameraId++;
     this.cameraId = this.cameraId % this.camList.length;
-    this.scanner.setCamera(this.camList[this.cameraId].id);
+    if (!this.scanOn) {
+      return;
+    }
+
+    this.scanner.start(this.camList[this.cameraId].id)
+      .catch((err: Error) => {
+        this.scanOn = false;
+        this.message = this.cameraErrorMessage(err);
+        this.cd.markForCheck();
+      });
   }
 
   private cameraErrorMessage(err: Error): string {

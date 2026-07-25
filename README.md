@@ -101,5 +101,6 @@ Uploaded photos are stored in the Docker volume `anti_hlam_uploads` and served f
 - Print QR codes in the QR section.
 - Bind `place:*` codes as places.
 - Bind `item:*` codes or factory QR codes as items and choose their place.
+- Factory item codes can be QR, Data Matrix, or common 1D barcodes such as EAN/UPC/Code 128.
 - Attach or replace photos from the binding screen or catalog.
 - Use the catalog and search screens to find items and places.
