@@ -148,7 +148,7 @@ export class ApiService {
     return this.post<SavePlaceResponse>('save_place', { qr_string: qrString, name });
   }
 
-  saveItem(qrString: string, name: string, placeId: number): Observable<SaveItemResponse> {
+  saveItem(qrString: string, name: string, placeId: number | null): Observable<SaveItemResponse> {
     return this.post<SaveItemResponse>('save_item', {
       qr_string: qrString,
       name,

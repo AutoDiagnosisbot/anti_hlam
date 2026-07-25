@@ -60,6 +60,7 @@
                 <input type="file" accept="image/*" capture="environment" (change)="uploadItemPhoto(item, $event)">
               </label>
               <button class="link-button" *ngIf="item.photo_url" type="button" (click)="deleteItemPhoto(item)">Без фото</button>
+              <button class="link-button neutral-link" type="button" (click)="takeItem(item)">Взять</button>
               <button class="link-button" type="button" (click)="deleteItem(item)">Удалить</button>
             </td>
           </tr>
@@ -71,7 +72,8 @@
   </section>
 
   <section class="unplaced" *ngIf="unplacedItems.length > 0">
-    <h2>Вещи без места</h2>
+    <h2>Без места / на руках</h2>
+    <p class="muted">Эти вещи есть в каталоге, но сейчас не лежат ни в одном месте.</p>
     <table>
       <thead>
         <tr>
@@ -90,6 +92,15 @@
           </td>
           <td><code>{{ item.qr_string }}</code></td>
           <td class="action-cell">
+            <div class="put-away">
+              <select class="inline-select" [(ngModel)]="selectedPlaceByItemId[item.id]" [disabled]="places.length === 0">
+                <option [ngValue]="null">Куда положить...</option>
+                <option *ngFor="let place of places" [ngValue]="place.id">{{ place.name }}</option>
+              </select>
+              <button class="link-button neutral-link" type="button" (click)="putItem(item)" [disabled]="!selectedPlaceByItemId[item.id]">
+                Положить
+              </button>
+            </div>
             <label class="link-upload">
               Фото
               <input type="file" accept="image/*" capture="environment" (change)="uploadItemPhoto(item, $event)">

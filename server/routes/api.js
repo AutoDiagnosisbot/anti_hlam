@@ -481,7 +481,10 @@ router.post('/save_item', asyncHandler(async function saveItem(req, res) {
   const qrString = cleanText(req.body.qr_string);
   const name = cleanText(req.body.name);
   const placeQrString = cleanText(req.body.place_qr_string);
-  const placeId = Number(req.body.place_id || 0);
+  const rawPlaceId = req.body.place_id;
+  const placeId = rawPlaceId === null || rawPlaceId === undefined || rawPlaceId === ''
+    ? null
+    : Number(rawPlaceId);
 
   if (!qrString) {
     error(res, 400, 'Item QR is required.');
@@ -498,30 +501,42 @@ router.post('/save_item', asyncHandler(async function saveItem(req, res) {
     return;
   }
 
-  let placeResult;
-  if (placeId) {
-    placeResult = await db.query(
+  if (placeId !== null && (!Number.isInteger(placeId) || placeId <= 0)) {
+    error(res, 400, 'Place id is invalid.');
+    return;
+  }
+
+  let resolvedPlaceId = null;
+  if (placeId !== null) {
+    const placeResult = await db.query(
       `SELECT id
          FROM places
         WHERE user_id = $1 AND id = $2
         LIMIT 1`,
       [user.id, placeId]
     );
+
+    if (!placeResult.rows[0]) {
+      error(res, 400, 'Selected place was not found.');
+      return;
+    }
+
+    resolvedPlaceId = placeResult.rows[0].id;
   } else if (placeQrString) {
-    placeResult = await db.query(
+    const placeResult = await db.query(
       `SELECT id
          FROM places
         WHERE user_id = $1 AND qr_string = $2
         LIMIT 1`,
       [user.id, placeQrString]
     );
-  } else {
-    placeResult = { rows: [] };
-  }
 
-  if (!placeResult.rows[0]) {
-    error(res, 400, 'Select an existing place before saving an item.');
-    return;
+    if (!placeResult.rows[0]) {
+      error(res, 400, 'Selected place was not found.');
+      return;
+    }
+
+    resolvedPlaceId = placeResult.rows[0].id;
   }
 
   const itemResult = await db.query(
@@ -531,7 +546,7 @@ router.post('/save_item', asyncHandler(async function saveItem(req, res) {
      DO UPDATE SET place_id = EXCLUDED.place_id, name = EXCLUDED.name, updated_at = now()
      RETURNING id, user_id, place_id, name, qr_string, photo_file, photo_mime, photo_original_name,
                photo_size, photo_uploaded_at, created_at, updated_at`,
-    [user.id, placeResult.rows[0].id, name, qrString]
+    [user.id, resolvedPlaceId, name, qrString]
   );
 
   res.json({

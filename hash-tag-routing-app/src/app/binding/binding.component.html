@@ -90,17 +90,20 @@
       <input matInput placeholder="Ножницы" [formControl]="nameFormControl">
     </mat-form-field>
 
-    <label class="select-label" for="placeSelect">Место</label>
+    <label class="select-label" for="placeSelect">Где сейчас находится</label>
     <select id="placeSelect" [formControl]="placeFormControl">
-      <option [ngValue]="null" disabled>Выберите место</option>
+      <option [ngValue]="null">Без места / на руках</option>
       <option *ngFor="let place of places" [ngValue]="place.id">{{ place.name }}</option>
     </select>
 
+    <p class="muted" *ngIf="existingItem">
+      Сейчас: {{ existingItem.place ? existingItem.place.name : 'без места / на руках' }}.
+    </p>
     <p class="muted" *ngIf="places.length === 0">
-      Сначала привяжите хотя бы одно место.
+      Мест пока нет, но вещь можно сохранить без места и разложить позже.
     </p>
 
-    <button mat-raised-button color="primary" type="button" (click)="saveItem()" [disabled]="loading || places.length === 0">
+    <button mat-raised-button color="primary" type="button" (click)="saveItem()" [disabled]="loading">
       Сохранить вещь
     </button>
 

@@ -2,17 +2,19 @@ import { Component, OnInit } from '@angular/core';
 import {MenuComponent} from "../menu/menu.component";
 import {NgFor, NgIf} from "@angular/common";
 import {ApiItem, ApiPlace, ApiResponse, ApiService, FullListResponse} from "../services/api.service";
+import {FormsModule} from "@angular/forms";
 
 @Component({
   selector: 'app-list-items',
   standalone: true,
-  imports: [MenuComponent, NgFor, NgIf],
+  imports: [MenuComponent, NgFor, NgIf, FormsModule],
   templateUrl: './list-items.component.html',
   styleUrl: './list-items.component.css'
 })
 export class ListItemsComponent implements OnInit {
   places: ApiPlace[] = [];
   unplacedItems: ApiItem[] = [];
+  selectedPlaceByItemId: Record<number, number | null> = {};
   loading = false;
   message = '';
 
@@ -33,6 +35,10 @@ export class ListItemsComponent implements OnInit {
         if (response.status === 'ok') {
           this.places = response.places || [];
           this.unplacedItems = response.unplacedItems || [];
+          this.selectedPlaceByItemId = {};
+          this.unplacedItems.forEach((item) => {
+            this.selectedPlaceByItemId[item.id] = null;
+          });
           return;
         }
         this.message = response.description || 'Не удалось загрузить каталог.';
@@ -68,6 +74,20 @@ export class ListItemsComponent implements OnInit {
         this.message = response.error?.description || 'Не удалось удалить вещь.';
       },
     });
+  }
+
+  takeItem(item: ApiItem) {
+    this.saveItemLocation(item, null, 'Вещь отмечена как без места / на руках.');
+  }
+
+  putItem(item: ApiItem) {
+    const placeId = this.selectedPlaceByItemId[item.id];
+    if (!placeId) {
+      this.message = 'Выберите место, куда положить вещь.';
+      return;
+    }
+
+    this.saveItemLocation(item, placeId, 'Вещь перемещена.');
   }
 
   photoUrl(url: string | null): string {
@@ -120,6 +140,19 @@ export class ListItemsComponent implements OnInit {
       },
       error: (response: { error?: ApiResponse }) => {
         this.message = response.error?.description || 'Не удалось удалить фото.';
+      },
+    });
+  }
+
+  private saveItemLocation(item: ApiItem, placeId: number | null, successMessage: string) {
+    this.message = 'Сохраняю место вещи...';
+    this.api.saveItem(item.qr_string, item.name, placeId).subscribe({
+      next: () => {
+        this.message = successMessage;
+        this.load(false);
+      },
+      error: (response: { error?: ApiResponse }) => {
+        this.message = response.error?.description || 'Не удалось изменить место вещи.';
       },
     });
   }

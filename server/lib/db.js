@@ -75,6 +75,7 @@ async function ensureSchema() {
     ALTER TABLE items ADD COLUMN IF NOT EXISTS photo_original_name TEXT;
     ALTER TABLE items ADD COLUMN IF NOT EXISTS photo_size INTEGER;
     ALTER TABLE items ADD COLUMN IF NOT EXISTS photo_uploaded_at TIMESTAMPTZ;
+    ALTER TABLE items ALTER COLUMN place_id DROP NOT NULL;
   `);
 }
 

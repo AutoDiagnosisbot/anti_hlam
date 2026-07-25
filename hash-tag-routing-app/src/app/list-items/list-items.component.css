@@ -96,7 +96,7 @@ code {
 }
 
 .action-cell {
-  width: 190px;
+  width: 300px;
   text-align: right;
 }
 
@@ -179,6 +179,34 @@ code {
   color: #2f7a65;
 }
 
+.neutral-link {
+  color: #2f7a65;
+}
+
+.link-button:disabled {
+  color: #9aa39e;
+  cursor: not-allowed;
+}
+
+.put-away {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.inline-select {
+  width: min(180px, 100%);
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid #c8d0cb;
+  border-radius: 6px;
+  background: #fff;
+  color: #202124;
+  font: inherit;
+}
+
 .file-button input,
 .link-upload input {
   display: none;
@@ -201,5 +229,10 @@ code {
 
   .row-actions {
     justify-content: flex-start;
+  }
+
+  .put-away {
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 }

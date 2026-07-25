@@ -51,7 +51,7 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   qrFormControl = new FormControl('', [Validators.required]);
   nameFormControl = new FormControl('', [Validators.required]);
-  placeFormControl = new FormControl<number | null>(null, [Validators.required]);
+  placeFormControl = new FormControl<number | null>(null);
 
   scanner: QrScanner | null = null;
   scanOn = false;
@@ -91,9 +91,6 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
       next: (response: FullListResponse) => {
         if (response.status === 'ok') {
           this.places = response.places || [];
-          if (!this.placeFormControl.value && this.places.length > 0) {
-            this.placeFormControl.setValue(this.places[0].id);
-          }
         }
       },
     });
@@ -136,8 +133,8 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
           this.placeFormControl.setValue(response.item.place_id);
         } else {
           this.nameFormControl.setValue('');
-          if (this.mode === 'item' && this.places.length > 0) {
-            this.placeFormControl.setValue(this.places[0].id);
+          if (this.mode === 'item') {
+            this.placeFormControl.setValue(null);
           }
         }
 
@@ -179,9 +176,8 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   saveItem() {
     this.nameFormControl.markAsTouched();
-    this.placeFormControl.markAsTouched();
-    if (this.nameFormControl.invalid || this.placeFormControl.invalid || !this.currentQr) {
-      this.message = 'Введите название вещи и выберите место.';
+    if (this.nameFormControl.invalid || !this.currentQr) {
+      this.message = 'Введите название вещи.';
       return;
     }
 
@@ -189,7 +185,7 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
     this.api.saveItem(
       this.currentQr,
       this.nameFormControl.getRawValue() || '',
-      Number(this.placeFormControl.getRawValue())
+      this.placeFormControl.getRawValue()
     ).subscribe({
       next: (response: SaveItemResponse) => {
         this.loading = false;
