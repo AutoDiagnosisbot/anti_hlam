@@ -8,12 +8,7 @@ server {
     }
 
     location / {
-        set ${DOLLAR}https_port_suffix ":${PUBLIC_HTTPS_PORT}";
-        if ("${PUBLIC_HTTPS_PORT}" = "443") {
-            set ${DOLLAR}https_port_suffix "";
-        }
-
-        return 301 https://${DOLLAR}host${DOLLAR}https_port_suffix${DOLLAR}request_uri;
+        return 301 https://${DOMAIN}:${PUBLIC_HTTPS_PORT}${DOLLAR}request_uri;
     }
 }
 
