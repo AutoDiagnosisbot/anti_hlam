@@ -90,6 +90,10 @@ export class ScanComponent implements OnDestroy {
     });
   }
 
+  photoUrl(url: string | null): string {
+    return this.api.assetUrl(url);
+  }
+
   startScan() {
     setTimeout(() => {
       if (!this.cameraInitialized) {

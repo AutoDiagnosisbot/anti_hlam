@@ -50,6 +50,19 @@
       Сохранить место
     </button>
 
+    <div class="photo-panel" *ngIf="existingPlace">
+      <img *ngIf="currentPhotoUrl()" [src]="currentPhotoUrl()" alt="Фото места">
+      <div class="photo-actions">
+        <label class="file-button">
+          {{ currentPhotoUrl() ? 'Заменить фото' : 'Добавить фото' }}
+          <input type="file" accept="image/*" capture="environment" (change)="uploadCurrentPhoto($event)">
+        </label>
+        <button mat-stroked-button color="warn" type="button" *ngIf="currentPhotoUrl()" (click)="deleteCurrentPhoto()">
+          Удалить фото
+        </button>
+      </div>
+    </div>
+
     <table *ngIf="existingPlace && existingPlace.items.length > 0">
       <thead>
         <tr>
@@ -90,5 +103,18 @@
     <button mat-raised-button color="primary" type="button" (click)="saveItem()" [disabled]="loading || places.length === 0">
       Сохранить вещь
     </button>
+
+    <div class="photo-panel" *ngIf="existingItem">
+      <img *ngIf="currentPhotoUrl()" [src]="currentPhotoUrl()" alt="Фото вещи">
+      <div class="photo-actions">
+        <label class="file-button">
+          {{ currentPhotoUrl() ? 'Заменить фото' : 'Добавить фото' }}
+          <input type="file" accept="image/*" capture="environment" (change)="uploadCurrentPhoto($event)">
+        </label>
+        <button mat-stroked-button color="warn" type="button" *ngIf="currentPhotoUrl()" (click)="deleteCurrentPhoto()">
+          Удалить фото
+        </button>
+      </div>
+    </div>
   </section>
 </main>

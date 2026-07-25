@@ -92,6 +92,48 @@ code {
   word-break: break-word;
 }
 
+.photo-panel {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid #edf0eb;
+  border-radius: 8px;
+  background: #f8faf7;
+}
+
+.photo-panel img {
+  width: 116px;
+  height: 116px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border: 1px solid #dfe4dc;
+  border-radius: 8px;
+  background: #edf0eb;
+}
+
+.photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.file-button {
+  min-height: 36px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 12px;
+  border: 1px solid #c8d0cb;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #2f7a65;
+  cursor: pointer;
+}
+
+.file-button input {
+  display: none;
+}
+
 .select-label {
   color: #68736d;
   font-size: 13px;
@@ -133,6 +175,11 @@ th {
   .manual-panel,
   .result-head,
   .camera-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .photo-panel {
     align-items: stretch;
     flex-direction: column;
   }

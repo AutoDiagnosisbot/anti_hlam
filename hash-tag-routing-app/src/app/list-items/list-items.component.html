@@ -22,11 +22,19 @@
   <section class="place-list" *ngIf="places.length > 0">
     <article class="place-row" *ngFor="let place of places">
       <div class="place-head">
-        <div>
+        <img class="photo-thumb" *ngIf="place.photo_url" [src]="photoUrl(place.photo_url)" alt="Фото места">
+        <div class="place-title">
           <h2>{{ place.name }}</h2>
           <p>{{ place.qr_string }}</p>
         </div>
-        <button class="danger-button" type="button" (click)="deletePlace(place)">Удалить</button>
+        <div class="row-actions">
+          <label class="file-button">
+            Фото
+            <input type="file" accept="image/*" capture="environment" (change)="uploadPlacePhoto(place, $event)">
+          </label>
+          <button class="secondary-button" *ngIf="place.photo_url" type="button" (click)="deletePlacePhoto(place)">Без фото</button>
+          <button class="danger-button" type="button" (click)="deletePlace(place)">Удалить</button>
+        </div>
       </div>
 
       <table *ngIf="place.items.length > 0">
@@ -39,9 +47,19 @@
         </thead>
         <tbody>
           <tr *ngFor="let item of place.items">
-            <td>{{ item.name }}</td>
+            <td>
+              <div class="item-cell">
+                <img class="photo-mini" *ngIf="item.photo_url" [src]="photoUrl(item.photo_url)" alt="Фото вещи">
+                <span>{{ item.name }}</span>
+              </div>
+            </td>
             <td><code>{{ item.qr_string }}</code></td>
             <td class="action-cell">
+              <label class="link-upload">
+                Фото
+                <input type="file" accept="image/*" capture="environment" (change)="uploadItemPhoto(item, $event)">
+              </label>
+              <button class="link-button" *ngIf="item.photo_url" type="button" (click)="deleteItemPhoto(item)">Без фото</button>
               <button class="link-button" type="button" (click)="deleteItem(item)">Удалить</button>
             </td>
           </tr>
@@ -64,9 +82,19 @@
       </thead>
       <tbody>
         <tr *ngFor="let item of unplacedItems">
-          <td>{{ item.name }}</td>
+          <td>
+            <div class="item-cell">
+              <img class="photo-mini" *ngIf="item.photo_url" [src]="photoUrl(item.photo_url)" alt="Фото вещи">
+              <span>{{ item.name }}</span>
+            </div>
+          </td>
           <td><code>{{ item.qr_string }}</code></td>
           <td class="action-cell">
+            <label class="link-upload">
+              Фото
+              <input type="file" accept="image/*" capture="environment" (change)="uploadItemPhoto(item, $event)">
+            </label>
+            <button class="link-button" *ngIf="item.photo_url" type="button" (click)="deleteItemPhoto(item)">Без фото</button>
             <button class="link-button" type="button" (click)="deleteItem(item)">Удалить</button>
           </td>
         </tr>

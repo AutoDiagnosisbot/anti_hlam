@@ -30,6 +30,9 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-anti_hlam}:${POSTGRES_PASSWORD:-anti_hlam_dev_password}@postgres:5432/${POSTGRES_DB:-anti_hlam}
     ports:
       - "8083:8083"
+    volumes:
+      - anti_hlam_uploads:/app/server/uploads
 
 volumes:
   anti_hlam_pgdata:
+  anti_hlam_uploads:

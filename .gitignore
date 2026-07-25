@@ -12,6 +12,7 @@ hash-tag-routing-app/.angular/
 server/node_modules/
 server/data/*.json
 server/data/*.tmp
+server/uploads/
 server/config/config.json
 
 .env

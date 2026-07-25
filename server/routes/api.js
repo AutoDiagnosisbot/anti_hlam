@@ -1,9 +1,28 @@
 const crypto = require('crypto');
 const express = require('express');
+const fs = require('fs');
+const multer = require('multer');
+const path = require('path');
 const db = require('../lib/db');
 
 const router = express.Router();
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const MAX_PHOTO_SIZE = 8 * 1024 * 1024;
+const uploadRoot = path.resolve(__dirname, '..', 'uploads');
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: MAX_PHOTO_SIZE,
+    files: 1,
+  },
+  fileFilter: function imageOnly(req, file, cb) {
+    if (!file.mimetype || file.mimetype.indexOf('image/') !== 0) {
+      cb(new Error('Only image files are allowed.'));
+      return;
+    }
+    cb(null, true);
+  },
+});
 
 function asyncHandler(handler) {
   return function wrappedHandler(req, res, next) {
@@ -37,6 +56,57 @@ function toIso(value) {
   return String(value);
 }
 
+function extensionFromMime(mimeType) {
+  const knownTypes = {
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/webp': '.webp',
+    'image/gif': '.gif',
+    'image/heic': '.heic',
+    'image/heif': '.heif',
+  };
+  return knownTypes[mimeType] || '.img';
+}
+
+function photoUrl(row) {
+  if (!row.photo_file) {
+    return null;
+  }
+  return '/uploads/' + row.user_id + '/' + row.photo_file;
+}
+
+function photoFields(row) {
+  return {
+    photo_url: photoUrl(row),
+    photo_mime: row.photo_mime || null,
+    photo_original_name: row.photo_original_name || null,
+    photo_size: row.photo_size || null,
+    photo_uploaded_at: toIso(row.photo_uploaded_at) || null,
+  };
+}
+
+async function ensureUserUploadDir(userId) {
+  const userDir = path.join(uploadRoot, String(userId));
+  await fs.promises.mkdir(userDir, { recursive: true });
+  return userDir;
+}
+
+async function removePhotoFile(userId, fileName) {
+  if (!fileName) {
+    return;
+  }
+
+  const safeName = path.basename(fileName);
+  const filePath = path.join(uploadRoot, String(userId), safeName);
+  try {
+    await fs.promises.unlink(filePath);
+  } catch (err) {
+    if (!err || err.code !== 'ENOENT') {
+      console.warn('Failed to remove photo file:', filePath, err);
+    }
+  }
+}
+
 function mapUser(row) {
   return {
     id: row.id,
@@ -45,7 +115,7 @@ function mapUser(row) {
 }
 
 function mapPlace(row) {
-  return {
+  return Object.assign({
     id: row.id,
     user_id: row.user_id,
     name: row.name,
@@ -53,11 +123,11 @@ function mapPlace(row) {
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
     items: [],
-  };
+  }, photoFields(row));
 }
 
 function mapItem(row) {
-  return {
+  return Object.assign({
     id: row.id,
     user_id: row.user_id,
     place_id: row.place_id,
@@ -65,7 +135,7 @@ function mapItem(row) {
     qr_string: row.qr_string,
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
-  };
+  }, photoFields(row));
 }
 
 function error(res, statusCode, description) {
@@ -122,7 +192,8 @@ async function requireUser(req, res) {
 
 async function getFullList(userId) {
   const placesResult = await db.query(
-    `SELECT id, user_id, name, qr_string, created_at, updated_at
+    `SELECT id, user_id, name, qr_string, photo_file, photo_mime, photo_original_name,
+            photo_size, photo_uploaded_at, created_at, updated_at
        FROM places
       WHERE user_id = $1
       ORDER BY lower(name), id`,
@@ -130,7 +201,8 @@ async function getFullList(userId) {
   );
 
   const itemsResult = await db.query(
-    `SELECT id, user_id, place_id, name, qr_string, created_at, updated_at
+    `SELECT id, user_id, place_id, name, qr_string, photo_file, photo_mime, photo_original_name,
+            photo_size, photo_uploaded_at, created_at, updated_at
        FROM items
       WHERE user_id = $1
       ORDER BY lower(name), id`,
@@ -177,7 +249,8 @@ async function getFullList(userId) {
 async function getPlaceWithItems(userId, placeRow) {
   const place = mapPlace(placeRow);
   const itemsResult = await db.query(
-    `SELECT id, user_id, place_id, name, qr_string, created_at, updated_at
+    `SELECT id, user_id, place_id, name, qr_string, photo_file, photo_mime, photo_original_name,
+            photo_size, photo_uploaded_at, created_at, updated_at
        FROM items
       WHERE user_id = $1 AND place_id = $2
       ORDER BY lower(name), id`,
@@ -195,7 +268,8 @@ async function getItemWithPlace(userId, itemRow) {
   }
 
   const placeResult = await db.query(
-    `SELECT id, user_id, name, qr_string, created_at, updated_at
+    `SELECT id, user_id, name, qr_string, photo_file, photo_mime, photo_original_name,
+            photo_size, photo_uploaded_at, created_at, updated_at
        FROM places
       WHERE user_id = $1 AND id = $2
       LIMIT 1`,
@@ -316,7 +390,8 @@ router.post('/resolve_qr', asyncHandler(async function resolveQr(req, res) {
   }
 
   const placeResult = await db.query(
-    `SELECT id, user_id, name, qr_string, created_at, updated_at
+    `SELECT id, user_id, name, qr_string, photo_file, photo_mime, photo_original_name,
+            photo_size, photo_uploaded_at, created_at, updated_at
        FROM places
       WHERE user_id = $1 AND qr_string = $2
       LIMIT 1`,
@@ -334,7 +409,8 @@ router.post('/resolve_qr', asyncHandler(async function resolveQr(req, res) {
   }
 
   const itemResult = await db.query(
-    `SELECT id, user_id, place_id, name, qr_string, created_at, updated_at
+    `SELECT id, user_id, place_id, name, qr_string, photo_file, photo_mime, photo_original_name,
+            photo_size, photo_uploaded_at, created_at, updated_at
        FROM items
       WHERE user_id = $1 AND qr_string = $2
       LIMIT 1`,
@@ -384,7 +460,8 @@ router.post('/save_place', asyncHandler(async function savePlace(req, res) {
      VALUES ($1, $2, $3)
      ON CONFLICT (user_id, qr_string)
      DO UPDATE SET name = EXCLUDED.name, updated_at = now()
-     RETURNING id, user_id, name, qr_string, created_at, updated_at`,
+     RETURNING id, user_id, name, qr_string, photo_file, photo_mime, photo_original_name,
+               photo_size, photo_uploaded_at, created_at, updated_at`,
     [user.id, name, qrString]
   );
 
@@ -447,7 +524,8 @@ router.post('/save_item', asyncHandler(async function saveItem(req, res) {
      VALUES ($1, $2, $3, $4)
      ON CONFLICT (user_id, qr_string)
      DO UPDATE SET place_id = EXCLUDED.place_id, name = EXCLUDED.name, updated_at = now()
-     RETURNING id, user_id, place_id, name, qr_string, created_at, updated_at`,
+     RETURNING id, user_id, place_id, name, qr_string, photo_file, photo_mime, photo_original_name,
+               photo_size, photo_uploaded_at, created_at, updated_at`,
     [user.id, placeResult.rows[0].id, name, qrString]
   );
 
@@ -455,6 +533,156 @@ router.post('/save_item', asyncHandler(async function saveItem(req, res) {
     status: 'ok',
     result: true,
     item: await getItemWithPlace(user.id, itemResult.rows[0]),
+  });
+}));
+
+router.post('/upload_photo', upload.single('photo'), asyncHandler(async function uploadPhoto(req, res) {
+  const user = await requireUser(req, res);
+  if (!user) {
+    return;
+  }
+
+  const targetType = cleanText(req.body.target_type);
+  const targetId = Number(req.body.target_id || 0);
+
+  if (targetType !== 'place' && targetType !== 'item') {
+    error(res, 400, 'target_type must be place or item.');
+    return;
+  }
+
+  if (!targetId) {
+    error(res, 400, 'target_id is required.');
+    return;
+  }
+
+  if (!req.file) {
+    error(res, 400, 'Photo file is required.');
+    return;
+  }
+
+  const tableName = targetType === 'place' ? 'places' : 'items';
+  const existingResult = await db.query(
+    `SELECT id, user_id, photo_file
+       FROM ${tableName}
+      WHERE user_id = $1 AND id = $2
+      LIMIT 1`,
+    [user.id, targetId]
+  );
+  const existing = existingResult.rows[0];
+
+  if (!existing) {
+    error(res, 404, targetType === 'place' ? 'Place was not found.' : 'Item was not found.');
+    return;
+  }
+
+  const userDir = await ensureUserUploadDir(user.id);
+  const fileName = crypto.randomBytes(24).toString('hex') + extensionFromMime(req.file.mimetype);
+  const filePath = path.join(userDir, fileName);
+
+  await fs.promises.writeFile(filePath, req.file.buffer);
+
+  let updatedResult;
+  try {
+    updatedResult = await db.query(
+      `UPDATE ${tableName}
+          SET photo_file = $1,
+              photo_mime = $2,
+              photo_original_name = $3,
+              photo_size = $4,
+              photo_uploaded_at = now(),
+              updated_at = now()
+        WHERE user_id = $5 AND id = $6
+        RETURNING id, user_id, ${targetType === 'place' ? '' : 'place_id,'}
+                  name, qr_string, photo_file, photo_mime, photo_original_name,
+                  photo_size, photo_uploaded_at, created_at, updated_at`,
+      [fileName, req.file.mimetype, req.file.originalname, req.file.size, user.id, targetId]
+    );
+  } catch (err) {
+    await removePhotoFile(user.id, fileName);
+    throw err;
+  }
+
+  await removePhotoFile(user.id, existing.photo_file);
+
+  if (targetType === 'place') {
+    res.json({
+      status: 'ok',
+      result: true,
+      place: await getPlaceWithItems(user.id, updatedResult.rows[0]),
+    });
+    return;
+  }
+
+  res.json({
+    status: 'ok',
+    result: true,
+    item: await getItemWithPlace(user.id, updatedResult.rows[0]),
+  });
+}));
+
+router.post('/delete_photo', asyncHandler(async function deletePhoto(req, res) {
+  const user = await requireUser(req, res);
+  if (!user) {
+    return;
+  }
+
+  const targetType = cleanText(req.body.target_type);
+  const targetId = Number(req.body.target_id || 0);
+
+  if (targetType !== 'place' && targetType !== 'item') {
+    error(res, 400, 'target_type must be place or item.');
+    return;
+  }
+
+  if (!targetId) {
+    error(res, 400, 'target_id is required.');
+    return;
+  }
+
+  const tableName = targetType === 'place' ? 'places' : 'items';
+  const oldPhotoResult = await db.query(
+    `SELECT photo_file
+       FROM ${tableName}
+      WHERE user_id = $1 AND id = $2
+      LIMIT 1`,
+    [user.id, targetId]
+  );
+
+  const updatedResult = await db.query(
+    `UPDATE ${tableName}
+        SET photo_file = NULL,
+            photo_mime = NULL,
+            photo_original_name = NULL,
+            photo_size = NULL,
+            photo_uploaded_at = NULL,
+            updated_at = now()
+      WHERE user_id = $1 AND id = $2
+      RETURNING id, user_id, ${targetType === 'place' ? '' : 'place_id,'}
+                name, qr_string, photo_file, photo_mime, photo_original_name,
+                photo_size, photo_uploaded_at, created_at, updated_at`,
+    [user.id, targetId]
+  );
+
+  if (!updatedResult.rows[0]) {
+    error(res, 404, targetType === 'place' ? 'Place was not found.' : 'Item was not found.');
+    return;
+  }
+
+  await removePhotoFile(user.id, oldPhotoResult.rows[0] && oldPhotoResult.rows[0].photo_file);
+
+  if (targetType === 'place') {
+    res.json({
+      status: 'ok',
+      result: true,
+      place: await getPlaceWithItems(user.id, updatedResult.rows[0]),
+    });
+    return;
+  }
+
+  res.json({
+    status: 'ok',
+    result: true,
+    item: await getItemWithPlace(user.id, updatedResult.rows[0]),
   });
 }));
 
@@ -468,7 +696,7 @@ router.post('/delete_place', asyncHandler(async function deletePlace(req, res) {
   const result = await db.query(
     `DELETE FROM places
       WHERE user_id = $1 AND id = $2
-      RETURNING id`,
+      RETURNING id, user_id, photo_file`,
     [user.id, placeId]
   );
 
@@ -477,6 +705,7 @@ router.post('/delete_place', asyncHandler(async function deletePlace(req, res) {
     return;
   }
 
+  await removePhotoFile(user.id, result.rows[0].photo_file);
   res.json({ status: 'ok', result: true });
 }));
 
@@ -490,7 +719,7 @@ router.post('/delete_item', asyncHandler(async function deleteItem(req, res) {
   const result = await db.query(
     `DELETE FROM items
       WHERE user_id = $1 AND id = $2
-      RETURNING id`,
+      RETURNING id, user_id, photo_file`,
     [user.id, itemId]
   );
 
@@ -499,10 +728,21 @@ router.post('/delete_item', asyncHandler(async function deleteItem(req, res) {
     return;
   }
 
+  await removePhotoFile(user.id, result.rows[0].photo_file);
   res.json({ status: 'ok', result: true });
 }));
 
 router.use(function apiErrorHandler(err, req, res, next) {
+  if (err instanceof multer.MulterError) {
+    error(res, 400, err.code === 'LIMIT_FILE_SIZE' ? 'Photo must be 8 MB or smaller.' : err.message);
+    return;
+  }
+
+  if (err && err.message === 'Only image files are allowed.') {
+    error(res, 400, err.message);
+    return;
+  }
+
   console.error(err);
   error(res, 500, 'Internal server error.');
 });

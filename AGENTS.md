@@ -94,6 +94,7 @@ Current state:
 - The server exposes `/api/*` endpoints and serves the built Angular app from `hash-tag-routing-app/dist/hash-tag-routing-app/browser`.
 - The server creates the PostgreSQL schema on startup.
 - Docker Compose runs the app and PostgreSQL; the app is exposed on port `8083`.
+- Uploaded photos are stored in the Docker volume `anti_hlam_uploads` and served from `/uploads/...`.
 - The old `server/config/config.json` contains legacy secrets and is ignored by Git.
 
 Original backend task:
@@ -117,6 +118,8 @@ Implemented MVP endpoints:
 - `POST /api/resolve_qr`
 - `POST /api/save_place`
 - `POST /api/save_item`
+- `POST /api/upload_photo`
+- `POST /api/delete_photo`
 - `POST /api/delete_place`
 - `POST /api/delete_item`
 

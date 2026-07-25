@@ -35,8 +35,13 @@
   <p class="message" *ngIf="loading">Ищу...</p>
 
   <section class="result-panel" *ngIf="result && result.found && result.type === 'place' && result.place">
-    <h2>{{ result.place.name }}</h2>
-    <p><code>{{ result.place.qr_string }}</code></p>
+    <div class="result-title">
+      <img *ngIf="result.place.photo_url" [src]="photoUrl(result.place.photo_url)" alt="Фото места">
+      <div>
+        <h2>{{ result.place.name }}</h2>
+        <p><code>{{ result.place.qr_string }}</code></p>
+      </div>
+    </div>
 
     <table *ngIf="result.place.items.length > 0">
       <thead>
@@ -56,7 +61,10 @@
   </section>
 
   <section class="result-panel" *ngIf="result && result.found && result.type === 'item' && result.item">
-    <h2>{{ result.item.name }}</h2>
+    <div class="result-title">
+      <img *ngIf="result.item.photo_url" [src]="photoUrl(result.item.photo_url)" alt="Фото вещи">
+      <h2>{{ result.item.name }}</h2>
+    </div>
     <dl>
       <div>
         <dt>QR вещи</dt>

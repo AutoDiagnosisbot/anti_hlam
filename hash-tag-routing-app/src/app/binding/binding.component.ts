@@ -202,6 +202,87 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  photoUrl(url: string | null): string {
+    return this.api.assetUrl(url);
+  }
+
+  uploadCurrentPhoto(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    const target = this.currentPhotoTarget();
+    if (!target) {
+      this.message = 'Сначала сохраните место или вещь.';
+      return;
+    }
+
+    this.message = 'Загружаю фото...';
+    this.api.uploadPhoto(target.type, target.id, file).subscribe({
+      next: (response) => {
+        if (response.place) {
+          this.existingPlace = response.place;
+          this.loadPlaces();
+        }
+        if (response.item) {
+          this.existingItem = response.item;
+        }
+        this.message = 'Фото сохранено.';
+      },
+      error: (response: { error?: ApiResponse }) => {
+        this.message = response.error?.description || 'Не удалось загрузить фото.';
+      },
+    });
+  }
+
+  deleteCurrentPhoto() {
+    const target = this.currentPhotoTarget();
+    if (!target) {
+      return;
+    }
+
+    this.message = 'Удаляю фото...';
+    this.api.deletePhoto(target.type, target.id).subscribe({
+      next: (response) => {
+        if (response.place) {
+          this.existingPlace = response.place;
+          this.loadPlaces();
+        }
+        if (response.item) {
+          this.existingItem = response.item;
+        }
+        this.message = 'Фото удалено.';
+      },
+      error: (response: { error?: ApiResponse }) => {
+        this.message = response.error?.description || 'Не удалось удалить фото.';
+      },
+    });
+  }
+
+  currentPhotoUrl(): string {
+    if (this.mode === 'place' && this.existingPlace?.photo_url) {
+      return this.photoUrl(this.existingPlace.photo_url);
+    }
+    if (this.mode === 'item' && this.existingItem?.photo_url) {
+      return this.photoUrl(this.existingItem.photo_url);
+    }
+    return '';
+  }
+
+  private currentPhotoTarget(): { type: 'place' | 'item'; id: number } | null {
+    if (this.mode === 'place' && this.existingPlace) {
+      return { type: 'place', id: this.existingPlace.id };
+    }
+    if (this.mode === 'item' && this.existingItem) {
+      return { type: 'item', id: this.existingItem.id };
+    }
+    return null;
+  }
+
   startScan() {
     setTimeout(() => {
       if (!this.cameraInitialized) {

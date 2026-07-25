@@ -22,9 +22,11 @@ export class ListItemsComponent implements OnInit {
     this.load();
   }
 
-  load() {
+  load(clearMessage = true) {
     this.loading = true;
-    this.message = '';
+    if (clearMessage) {
+      this.message = '';
+    }
     this.api.getFullList().subscribe({
       next: (response: FullListResponse) => {
         this.loading = false;
@@ -64,6 +66,60 @@ export class ListItemsComponent implements OnInit {
       next: () => this.load(),
       error: (response: { error?: ApiResponse }) => {
         this.message = response.error?.description || 'Не удалось удалить вещь.';
+      },
+    });
+  }
+
+  photoUrl(url: string | null): string {
+    return this.api.assetUrl(url);
+  }
+
+  uploadPlacePhoto(place: ApiPlace, event: Event) {
+    this.uploadPhoto('place', place.id, event);
+  }
+
+  uploadItemPhoto(item: ApiItem, event: Event) {
+    this.uploadPhoto('item', item.id, event);
+  }
+
+  deletePlacePhoto(place: ApiPlace) {
+    this.deletePhoto('place', place.id);
+  }
+
+  deleteItemPhoto(item: ApiItem) {
+    this.deletePhoto('item', item.id);
+  }
+
+  private uploadPhoto(targetType: 'place' | 'item', targetId: number, event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    this.message = 'Загружаю фото...';
+    this.api.uploadPhoto(targetType, targetId, file).subscribe({
+      next: () => {
+        this.message = 'Фото сохранено.';
+        this.load(false);
+      },
+      error: (response: { error?: ApiResponse }) => {
+        this.message = response.error?.description || 'Не удалось загрузить фото.';
+      },
+    });
+  }
+
+  private deletePhoto(targetType: 'place' | 'item', targetId: number) {
+    this.message = 'Удаляю фото...';
+    this.api.deletePhoto(targetType, targetId).subscribe({
+      next: () => {
+        this.message = 'Фото удалено.';
+        this.load(false);
+      },
+      error: (response: { error?: ApiResponse }) => {
+        this.message = response.error?.description || 'Не удалось удалить фото.';
       },
     });
   }

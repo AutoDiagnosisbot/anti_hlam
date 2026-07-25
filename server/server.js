@@ -23,6 +23,13 @@ app.get('/health', function health(req, res) {
   res.json({ status: 'ok', app: 'anti-hlam' });
 });
 
+const uploadsRoot = path.resolve(__dirname, 'uploads');
+
+app.use('/uploads', express.static(uploadsRoot, {
+  index: false,
+  maxAge: '7d',
+}));
+
 app.use('/api', apiRouter);
 
 const staticRoot = path.resolve(__dirname, '..', 'hash-tag-routing-app', 'dist', 'hash-tag-routing-app', 'browser');

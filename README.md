@@ -48,6 +48,7 @@ npm run build
 ## Data
 
 Data is stored in PostgreSQL. The Docker volume is named `anti_hlam_pgdata`.
+Uploaded photos are stored in the Docker volume `anti_hlam_uploads` and served from `/uploads/...`.
 
 ## Main Workflows
 
@@ -55,4 +56,5 @@ Data is stored in PostgreSQL. The Docker volume is named `anti_hlam_pgdata`.
 - Print QR codes in the QR section.
 - Bind `place:*` codes as places.
 - Bind `item:*` codes as items and choose their place.
+- Attach or replace photos from the binding screen or catalog.
 - Use the catalog and search screens to find items and places.

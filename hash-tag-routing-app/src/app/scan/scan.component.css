@@ -81,6 +81,22 @@ h2 {
   padding: 18px;
 }
 
+.result-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.result-title img {
+  width: 116px;
+  height: 116px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border: 1px solid #dfe4dc;
+  border-radius: 8px;
+  background: #edf0eb;
+}
+
 code {
   color: #2f7a65;
   word-break: break-word;
@@ -121,6 +137,11 @@ dd {
   .manual-panel,
   .camera-actions {
     align-items: stretch;
+    flex-direction: column;
+  }
+
+  .result-title {
+    align-items: flex-start;
     flex-direction: column;
   }
 }

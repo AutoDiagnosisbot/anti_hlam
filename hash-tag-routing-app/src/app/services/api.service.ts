@@ -13,6 +13,11 @@ export interface ApiItem {
   place_id: number | null;
   name: string;
   qr_string: string;
+  photo_url: string | null;
+  photo_mime: string | null;
+  photo_original_name: string | null;
+  photo_size: number | null;
+  photo_uploaded_at: string | null;
   createdAt: string;
   updatedAt: string;
   place?: ApiPlace | null;
@@ -23,6 +28,11 @@ export interface ApiPlace {
   user_id: number;
   name: string;
   qr_string: string;
+  photo_url: string | null;
+  photo_mime: string | null;
+  photo_original_name: string | null;
+  photo_size: number | null;
+  photo_uploaded_at: string | null;
   createdAt: string;
   updatedAt: string;
   items: ApiItem[];
@@ -70,11 +80,19 @@ export interface SaveItemResponse extends ApiResponse {
   item: ApiItem;
 }
 
+export interface PhotoResponse extends ApiResponse {
+  place?: ApiPlace;
+  item?: ApiItem;
+}
+
+type PhotoTargetType = 'place' | 'item';
+
 @Injectable({
   providedIn: 'root',
 })
 export class ApiService {
   private readonly baseUrl = this.resolveBaseUrl();
+  private readonly assetOrigin = this.resolveAssetOrigin();
 
   constructor(private http: HttpClient) {}
 
@@ -146,6 +164,32 @@ export class ApiService {
     return this.post<ApiResponse>('delete_item', { item_id: itemId });
   }
 
+  uploadPhoto(targetType: PhotoTargetType, targetId: number, file: File): Observable<PhotoResponse> {
+    const body = new FormData();
+    body.append('session_id', this.sessionId);
+    body.append('target_type', targetType);
+    body.append('target_id', String(targetId));
+    body.append('photo', file);
+    return this.http.post<PhotoResponse>(`${this.baseUrl}/upload_photo`, body);
+  }
+
+  deletePhoto(targetType: PhotoTargetType, targetId: number): Observable<PhotoResponse> {
+    return this.post<PhotoResponse>('delete_photo', {
+      target_type: targetType,
+      target_id: targetId,
+    });
+  }
+
+  assetUrl(url: string | null | undefined): string {
+    if (!url) {
+      return '';
+    }
+    if (url.indexOf('http://') === 0 || url.indexOf('https://') === 0) {
+      return url;
+    }
+    return `${this.assetOrigin}${url}`;
+  }
+
   private post<T>(method: string, payload: Record<string, unknown>, includeSession = true): Observable<T> {
     const body = includeSession ? { ...payload, session_id: this.sessionId } : payload;
     return this.http.post<T>(`${this.baseUrl}/${method}`, body);
@@ -156,5 +200,12 @@ export class ApiService {
       return 'http://localhost:8083/api';
     }
     return '/api';
+  }
+
+  private resolveAssetOrigin(): string {
+    if (window.location.port === '4200') {
+      return 'http://localhost:8083';
+    }
+    return '';
   }
 }

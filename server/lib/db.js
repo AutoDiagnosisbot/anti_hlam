@@ -32,6 +32,11 @@ async function ensureSchema() {
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
       qr_string TEXT NOT NULL,
+      photo_file TEXT,
+      photo_mime TEXT,
+      photo_original_name TEXT,
+      photo_size INTEGER,
+      photo_uploaded_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       UNIQUE (user_id, qr_string)
@@ -43,6 +48,11 @@ async function ensureSchema() {
       place_id INTEGER REFERENCES places(id) ON DELETE SET NULL,
       name TEXT NOT NULL,
       qr_string TEXT NOT NULL,
+      photo_file TEXT,
+      photo_mime TEXT,
+      photo_original_name TEXT,
+      photo_size INTEGER,
+      photo_uploaded_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       UNIQUE (user_id, qr_string)
@@ -53,6 +63,18 @@ async function ensureSchema() {
     CREATE INDEX IF NOT EXISTS idx_places_user_id ON places(user_id);
     CREATE INDEX IF NOT EXISTS idx_items_user_id ON items(user_id);
     CREATE INDEX IF NOT EXISTS idx_items_place_id ON items(place_id);
+
+    ALTER TABLE places ADD COLUMN IF NOT EXISTS photo_file TEXT;
+    ALTER TABLE places ADD COLUMN IF NOT EXISTS photo_mime TEXT;
+    ALTER TABLE places ADD COLUMN IF NOT EXISTS photo_original_name TEXT;
+    ALTER TABLE places ADD COLUMN IF NOT EXISTS photo_size INTEGER;
+    ALTER TABLE places ADD COLUMN IF NOT EXISTS photo_uploaded_at TIMESTAMPTZ;
+
+    ALTER TABLE items ADD COLUMN IF NOT EXISTS photo_file TEXT;
+    ALTER TABLE items ADD COLUMN IF NOT EXISTS photo_mime TEXT;
+    ALTER TABLE items ADD COLUMN IF NOT EXISTS photo_original_name TEXT;
+    ALTER TABLE items ADD COLUMN IF NOT EXISTS photo_size INTEGER;
+    ALTER TABLE items ADD COLUMN IF NOT EXISTS photo_uploaded_at TIMESTAMPTZ;
   `);
 }
 
