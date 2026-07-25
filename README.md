@@ -29,6 +29,47 @@ Camera scanning on mobile browsers requires a secure context. `http://192.168...
 works for the app UI, but camera access needs `https://...` or a browser-specific
 development override.
 
+## HTTPS On Port 8083
+
+For mobile camera scanning, run the public site through nginx with a real
+Let's Encrypt certificate. The app can still be opened on external port `8083`;
+nginx will listen on that host port and proxy to the app container.
+
+DNS and router requirements:
+
+- The domain `A` record points to the public IP of the router.
+- The router forwards TCP `80` to `olegpc:80` for Let's Encrypt HTTP validation.
+- The router forwards TCP `8083` to `olegpc:8083` for the HTTPS app.
+
+On `olegpc`, set production HTTPS values in `.env`:
+
+```env
+APP_HTTP_BIND=127.0.0.1:18083
+HTTP_BIND=80
+HTTPS_BIND=8083
+PUBLIC_HTTPS_PORT=8083
+DOMAIN=your-domain.example
+LETSENCRYPT_EMAIL=you@example.com
+CERTBOT_STAGING=0
+```
+
+Then issue the certificate and start nginx:
+
+```bash
+cd /home/oleg/anti_hlam
+bash scripts/init-letsencrypt.sh
+```
+
+For this deployment the domain is `danechka.com`, so after that the app should
+be available at `https://danechka.com:8083`.
+
+Certificate renewal can be run manually or from cron:
+
+```bash
+cd /home/oleg/anti_hlam
+bash scripts/renew-letsencrypt.sh
+```
+
 ## Native Development
 
 You can also run PostgreSQL in Docker and run the Node server locally:

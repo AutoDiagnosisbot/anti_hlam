@@ -14,6 +14,7 @@ server/data/*.json
 server/data/*.tmp
 server/uploads/
 server/config/config.json
+nginx/certbot/
 
 .env
 .env.*
