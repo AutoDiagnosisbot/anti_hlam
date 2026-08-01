@@ -36,10 +36,13 @@
 
   <section class="result-panel" *ngIf="result && result.found && result.type === 'place' && result.place">
     <div class="result-title">
-      <img *ngIf="result.place.photo_url" [src]="photoUrl(result.place.photo_url)" alt="Фото места">
+      <div class="photo-strip" *ngIf="result.place.photos.length > 0">
+        <img *ngFor="let photo of result.place.photos" [src]="photoUrl(photo.photo_url)" alt="Фото места">
+      </div>
       <div>
         <h2>{{ result.place.name }}</h2>
         <p><code>{{ result.place.qr_string }}</code></p>
+        <p class="description" *ngIf="result.place.description">{{ result.place.description }}</p>
       </div>
     </div>
 
@@ -52,18 +55,41 @@
       </thead>
       <tbody>
         <tr *ngFor="let item of result.place.items">
-          <td>{{ item.name }}</td>
+          <td>
+            <div class="item-cell">
+              <img class="photo-mini" *ngFor="let photo of item.photos" [src]="photoUrl(photo.photo_url)" alt="Фото вещи">
+              <div>
+                <span>{{ item.name }}</span>
+                <p class="description" *ngIf="item.description">{{ item.description }}</p>
+              </div>
+            </div>
+          </td>
           <td><code>{{ item.qr_string }}</code></td>
         </tr>
       </tbody>
     </table>
     <p class="muted" *ngIf="result.place.items.length === 0">В этом месте пока нет вещей.</p>
+
+    <div class="child-places" *ngIf="result.place.child_places.length > 0">
+      <h3>Внутри находятся места</h3>
+      <ul>
+        <li *ngFor="let place of result.place.child_places">
+          <span>{{ place.name }}</span>
+          <code>{{ place.qr_string }}</code>
+        </li>
+      </ul>
+    </div>
   </section>
 
   <section class="result-panel" *ngIf="result && result.found && result.type === 'item' && result.item">
     <div class="result-title">
-      <img *ngIf="result.item.photo_url" [src]="photoUrl(result.item.photo_url)" alt="Фото вещи">
-      <h2>{{ result.item.name }}</h2>
+      <div class="photo-strip" *ngIf="result.item.photos.length > 0">
+        <img *ngFor="let photo of result.item.photos" [src]="photoUrl(photo.photo_url)" alt="Фото вещи">
+      </div>
+      <div>
+        <h2>{{ result.item.name }}</h2>
+        <p class="description" *ngIf="result.item.description">{{ result.item.description }}</p>
+      </div>
     </div>
     <dl>
       <div>

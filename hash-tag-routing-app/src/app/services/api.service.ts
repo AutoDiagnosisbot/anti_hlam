@@ -7,12 +7,23 @@ export interface ApiUser {
   username: string;
 }
 
+export interface ApiPhoto {
+  id: number;
+  photo_url: string | null;
+  photo_mime: string | null;
+  photo_original_name: string | null;
+  photo_size: number | null;
+  photo_uploaded_at: string | null;
+}
+
 export interface ApiItem {
   id: number;
   user_id: number;
   place_id: number | null;
   name: string;
+  description: string;
   qr_string: string;
+  photos: ApiPhoto[];
   photo_url: string | null;
   photo_mime: string | null;
   photo_original_name: string | null;
@@ -26,8 +37,11 @@ export interface ApiItem {
 export interface ApiPlace {
   id: number;
   user_id: number;
+  parent_place_id: number | null;
   name: string;
+  description: string;
   qr_string: string;
+  photos: ApiPhoto[];
   photo_url: string | null;
   photo_mime: string | null;
   photo_original_name: string | null;
@@ -36,6 +50,7 @@ export interface ApiPlace {
   createdAt: string;
   updatedAt: string;
   items: ApiItem[];
+  child_places: ApiPlace[];
 }
 
 export interface ApiListRow {
@@ -60,6 +75,7 @@ export interface AuthResponse extends ApiResponse {
 
 export interface FullListResponse extends ApiResponse {
   places: ApiPlace[];
+  rootPlaces: ApiPlace[];
   unplacedItems: ApiItem[];
   rows: ApiListRow[];
 }
@@ -144,14 +160,30 @@ export class ApiService {
     return this.post<ResolveQrResponse>('resolve_qr', { qr_string: qrString });
   }
 
-  savePlace(qrString: string, name: string): Observable<SavePlaceResponse> {
-    return this.post<SavePlaceResponse>('save_place', { qr_string: qrString, name });
+  savePlace(
+    qrString: string,
+    name: string,
+    description: string,
+    parentPlaceId: number | null
+  ): Observable<SavePlaceResponse> {
+    return this.post<SavePlaceResponse>('save_place', {
+      qr_string: qrString,
+      name,
+      description,
+      parent_place_id: parentPlaceId,
+    });
   }
 
-  saveItem(qrString: string, name: string, placeId: number | null): Observable<SaveItemResponse> {
+  saveItem(
+    qrString: string,
+    name: string,
+    description: string,
+    placeId: number | null
+  ): Observable<SaveItemResponse> {
     return this.post<SaveItemResponse>('save_item', {
       qr_string: qrString,
       name,
+      description,
       place_id: placeId,
     });
   }
@@ -173,10 +205,11 @@ export class ApiService {
     return this.http.post<PhotoResponse>(`${this.baseUrl}/upload_photo`, body);
   }
 
-  deletePhoto(targetType: PhotoTargetType, targetId: number): Observable<PhotoResponse> {
+  deletePhoto(targetType: PhotoTargetType, targetId: number, photoId: number): Observable<PhotoResponse> {
     return this.post<PhotoResponse>('delete_photo', {
       target_type: targetType,
       target_id: targetId,
+      photo_id: photoId,
     });
   }
 

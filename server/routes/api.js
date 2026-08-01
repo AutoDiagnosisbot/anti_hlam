@@ -8,6 +8,7 @@ const db = require('../lib/db');
 const router = express.Router();
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_PHOTO_SIZE = 8 * 1024 * 1024;
+const DESCRIPTION_MAX_LENGTH = 250;
 const uploadRoot = path.resolve(__dirname, '..', 'uploads');
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -32,6 +33,10 @@ function asyncHandler(handler) {
 
 function cleanText(value) {
   return String(value || '').trim();
+}
+
+function cleanDescription(value) {
+  return cleanText(value);
 }
 
 function cleanUsername(value) {
@@ -68,21 +73,44 @@ function extensionFromMime(mimeType) {
   return knownTypes[mimeType] || '.img';
 }
 
-function photoUrl(row) {
-  if (!row.photo_file) {
+function photoUrl(userId, fileName) {
+  if (!fileName) {
     return null;
   }
-  return '/uploads/' + row.user_id + '/' + row.photo_file;
+  return '/uploads/' + userId + '/' + fileName;
 }
 
-function photoFields(row) {
+function emptyPhotoFields() {
   return {
-    photo_url: photoUrl(row),
-    photo_mime: row.photo_mime || null,
-    photo_original_name: row.photo_original_name || null,
-    photo_size: row.photo_size || null,
-    photo_uploaded_at: toIso(row.photo_uploaded_at) || null,
+    photos: [],
+    photo_url: null,
+    photo_mime: null,
+    photo_original_name: null,
+    photo_size: null,
+    photo_uploaded_at: null,
   };
+}
+
+function mapPhoto(row) {
+  return {
+    id: row.id,
+    photo_url: photoUrl(row.user_id, row.file_name),
+    photo_mime: row.mime || null,
+    photo_original_name: row.original_name || null,
+    photo_size: row.size || null,
+    photo_uploaded_at: toIso(row.uploaded_at) || null,
+  };
+}
+
+function applyPhotos(entity, photos) {
+  entity.photos = photos;
+  const first = photos[0] || null;
+  entity.photo_url = first ? first.photo_url : null;
+  entity.photo_mime = first ? first.photo_mime : null;
+  entity.photo_original_name = first ? first.photo_original_name : null;
+  entity.photo_size = first ? first.photo_size : null;
+  entity.photo_uploaded_at = first ? first.photo_uploaded_at : null;
+  return entity;
 }
 
 async function ensureUserUploadDir(userId) {
@@ -118,12 +146,15 @@ function mapPlace(row) {
   return Object.assign({
     id: row.id,
     user_id: row.user_id,
+    parent_place_id: row.parent_place_id || null,
     name: row.name,
+    description: row.description || '',
     qr_string: row.qr_string,
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
     items: [],
-  }, photoFields(row));
+    child_places: [],
+  }, emptyPhotoFields());
 }
 
 function mapItem(row) {
@@ -132,10 +163,11 @@ function mapItem(row) {
     user_id: row.user_id,
     place_id: row.place_id,
     name: row.name,
+    description: row.description || '',
     qr_string: row.qr_string,
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
-  }, photoFields(row));
+  }, emptyPhotoFields());
 }
 
 function error(res, statusCode, description) {
@@ -190,10 +222,86 @@ async function requireUser(req, res) {
   return user;
 }
 
+function validateDescription(res, description) {
+  if (description.length > DESCRIPTION_MAX_LENGTH) {
+    error(res, 400, 'Description must be 250 characters or shorter.');
+    return false;
+  }
+  return true;
+}
+
+const PLACE_COLUMNS = `id, user_id, parent_place_id, name, description, qr_string,
+                       created_at, updated_at`;
+const ITEM_COLUMNS = `id, user_id, place_id, name, description, qr_string,
+                      created_at, updated_at`;
+const PHOTO_COLUMNS = `id, user_id, target_type, place_id, item_id, file_name, mime,
+                       original_name, size, uploaded_at, sort_order, created_at`;
+
+async function attachPhotos(userId, targetType, entities) {
+  if (!entities.length) {
+    return entities;
+  }
+
+  const idColumn = targetType === 'place' ? 'place_id' : 'item_id';
+  const ids = entities.map(function mapId(entity) {
+    return entity.id;
+  });
+
+  const photosResult = await db.query(
+    `SELECT ${PHOTO_COLUMNS}
+       FROM entity_photos
+      WHERE user_id = $1
+        AND target_type = $2
+        AND ${idColumn} = ANY($3::int[])
+      ORDER BY sort_order, id`,
+    [userId, targetType, ids]
+  );
+
+  const photosByTarget = {};
+  photosResult.rows.forEach(function groupPhoto(row) {
+    const targetId = targetType === 'place' ? row.place_id : row.item_id;
+    if (!photosByTarget[targetId]) {
+      photosByTarget[targetId] = [];
+    }
+    photosByTarget[targetId].push(mapPhoto(row));
+  });
+
+  entities.forEach(function applyEntityPhotos(entity) {
+    applyPhotos(entity, photosByTarget[entity.id] || []);
+  });
+
+  return entities;
+}
+
+async function placeParentWouldCreateCycle(userId, placeId, parentPlaceId) {
+  if (!placeId || !parentPlaceId) {
+    return false;
+  }
+
+  const result = await db.query(
+    `WITH RECURSIVE descendants AS (
+       SELECT id, parent_place_id
+         FROM places
+        WHERE user_id = $1 AND parent_place_id = $2
+       UNION ALL
+       SELECT p.id, p.parent_place_id
+         FROM places p
+         JOIN descendants d ON p.parent_place_id = d.id
+        WHERE p.user_id = $1
+     )
+     SELECT 1
+       FROM descendants
+      WHERE id = $3
+      LIMIT 1`,
+    [userId, placeId, parentPlaceId]
+  );
+
+  return Boolean(result.rows[0]);
+}
+
 async function getFullList(userId) {
   const placesResult = await db.query(
-    `SELECT id, user_id, name, qr_string, photo_file, photo_mime, photo_original_name,
-            photo_size, photo_uploaded_at, created_at, updated_at
+    `SELECT ${PLACE_COLUMNS}
        FROM places
       WHERE user_id = $1
       ORDER BY lower(name), id`,
@@ -201,8 +309,7 @@ async function getFullList(userId) {
   );
 
   const itemsResult = await db.query(
-    `SELECT id, user_id, place_id, name, qr_string, photo_file, photo_mime, photo_original_name,
-            photo_size, photo_uploaded_at, created_at, updated_at
+    `SELECT ${ITEM_COLUMNS}
        FROM items
       WHERE user_id = $1
       ORDER BY lower(name), id`,
@@ -211,10 +318,23 @@ async function getFullList(userId) {
 
   const places = placesResult.rows.map(mapPlace);
   const items = itemsResult.rows.map(mapItem);
+  await attachPhotos(userId, 'place', places);
+  await attachPhotos(userId, 'item', items);
+
   const placesById = {};
 
   places.forEach(function indexPlace(place) {
     placesById[place.id] = place;
+  });
+
+  const rootPlaces = [];
+  places.forEach(function attachChildPlace(place) {
+    const parent = place.parent_place_id ? placesById[place.parent_place_id] : null;
+    if (parent && parent.id !== place.id) {
+      parent.child_places.push(place);
+      return;
+    }
+    rootPlaces.push(place);
   });
 
   items.forEach(function attachItem(item) {
@@ -241,6 +361,7 @@ async function getFullList(userId) {
 
   return {
     places: places,
+    rootPlaces: rootPlaces,
     unplacedItems: unplacedItems,
     rows: rows,
   };
@@ -248,34 +369,49 @@ async function getFullList(userId) {
 
 async function getPlaceWithItems(userId, placeRow) {
   const place = mapPlace(placeRow);
+  await attachPhotos(userId, 'place', [place]);
+
+  const childPlacesResult = await db.query(
+    `SELECT ${PLACE_COLUMNS}
+       FROM places
+      WHERE user_id = $1 AND parent_place_id = $2
+      ORDER BY lower(name), id`,
+    [userId, place.id]
+  );
+  place.child_places = childPlacesResult.rows.map(mapPlace);
+  await attachPhotos(userId, 'place', place.child_places);
+
   const itemsResult = await db.query(
-    `SELECT id, user_id, place_id, name, qr_string, photo_file, photo_mime, photo_original_name,
-            photo_size, photo_uploaded_at, created_at, updated_at
+    `SELECT ${ITEM_COLUMNS}
        FROM items
       WHERE user_id = $1 AND place_id = $2
       ORDER BY lower(name), id`,
     [userId, place.id]
   );
   place.items = itemsResult.rows.map(mapItem);
+  await attachPhotos(userId, 'item', place.items);
   return place;
 }
 
 async function getItemWithPlace(userId, itemRow) {
   const item = mapItem(itemRow);
+  await attachPhotos(userId, 'item', [item]);
   if (!item.place_id) {
     item.place = null;
     return item;
   }
 
   const placeResult = await db.query(
-    `SELECT id, user_id, name, qr_string, photo_file, photo_mime, photo_original_name,
-            photo_size, photo_uploaded_at, created_at, updated_at
+    `SELECT ${PLACE_COLUMNS}
        FROM places
       WHERE user_id = $1 AND id = $2
       LIMIT 1`,
     [userId, item.place_id]
   );
   item.place = placeResult.rows[0] ? mapPlace(placeResult.rows[0]) : null;
+  if (item.place) {
+    await attachPhotos(userId, 'place', [item.place]);
+  }
   return item;
 }
 
@@ -390,8 +526,7 @@ router.post('/resolve_qr', asyncHandler(async function resolveQr(req, res) {
   }
 
   const placeResult = await db.query(
-    `SELECT id, user_id, name, qr_string, photo_file, photo_mime, photo_original_name,
-            photo_size, photo_uploaded_at, created_at, updated_at
+    `SELECT ${PLACE_COLUMNS}
        FROM places
       WHERE user_id = $1 AND qr_string = $2
       LIMIT 1`,
@@ -409,8 +544,7 @@ router.post('/resolve_qr', asyncHandler(async function resolveQr(req, res) {
   }
 
   const itemResult = await db.query(
-    `SELECT id, user_id, place_id, name, qr_string, photo_file, photo_mime, photo_original_name,
-            photo_size, photo_uploaded_at, created_at, updated_at
+    `SELECT ${ITEM_COLUMNS}
        FROM items
       WHERE user_id = $1 AND qr_string = $2
       LIMIT 1`,
@@ -444,6 +578,11 @@ router.post('/save_place', asyncHandler(async function savePlace(req, res) {
 
   const qrString = cleanText(req.body.qr_string);
   const name = cleanText(req.body.name);
+  const description = cleanDescription(req.body.description);
+  const rawParentPlaceId = req.body.parent_place_id;
+  const parentPlaceId = rawParentPlaceId === null || rawParentPlaceId === undefined || rawParentPlaceId === ''
+    ? null
+    : Number(rawParentPlaceId);
 
   if (qrString.indexOf('place:') !== 0) {
     error(res, 400, 'Place QR must start with place:.');
@@ -455,14 +594,58 @@ router.post('/save_place', asyncHandler(async function savePlace(req, res) {
     return;
   }
 
+  if (!validateDescription(res, description)) {
+    return;
+  }
+
+  if (parentPlaceId !== null && (!Number.isInteger(parentPlaceId) || parentPlaceId <= 0)) {
+    error(res, 400, 'Parent place id is invalid.');
+    return;
+  }
+
+  if (parentPlaceId !== null) {
+    const parentResult = await db.query(
+      `SELECT id
+         FROM places
+        WHERE user_id = $1 AND id = $2
+        LIMIT 1`,
+      [user.id, parentPlaceId]
+    );
+
+    if (!parentResult.rows[0]) {
+      error(res, 400, 'Parent place was not found.');
+      return;
+    }
+  }
+
+  const existingPlaceResult = await db.query(
+    `SELECT id
+       FROM places
+      WHERE user_id = $1 AND qr_string = $2
+      LIMIT 1`,
+    [user.id, qrString]
+  );
+  const existingPlace = existingPlaceResult.rows[0] || null;
+  if (existingPlace && parentPlaceId === existingPlace.id) {
+    error(res, 400, 'A place cannot be stored inside itself.');
+    return;
+  }
+
+  if (existingPlace && await placeParentWouldCreateCycle(user.id, existingPlace.id, parentPlaceId)) {
+    error(res, 400, 'A place cannot be stored inside one of its nested places.');
+    return;
+  }
+
   const placeResult = await db.query(
-    `INSERT INTO places (user_id, name, qr_string)
-     VALUES ($1, $2, $3)
+    `INSERT INTO places (user_id, parent_place_id, name, description, qr_string)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (user_id, qr_string)
-     DO UPDATE SET name = EXCLUDED.name, updated_at = now()
-     RETURNING id, user_id, name, qr_string, photo_file, photo_mime, photo_original_name,
-               photo_size, photo_uploaded_at, created_at, updated_at`,
-    [user.id, name, qrString]
+     DO UPDATE SET parent_place_id = EXCLUDED.parent_place_id,
+                   name = EXCLUDED.name,
+                   description = EXCLUDED.description,
+                   updated_at = now()
+     RETURNING ${PLACE_COLUMNS}`,
+    [user.id, parentPlaceId, name, description, qrString]
   );
 
   res.json({
@@ -480,6 +663,7 @@ router.post('/save_item', asyncHandler(async function saveItem(req, res) {
 
   const qrString = cleanText(req.body.qr_string);
   const name = cleanText(req.body.name);
+  const description = cleanDescription(req.body.description);
   const placeQrString = cleanText(req.body.place_qr_string);
   const rawPlaceId = req.body.place_id;
   const placeId = rawPlaceId === null || rawPlaceId === undefined || rawPlaceId === ''
@@ -498,6 +682,10 @@ router.post('/save_item', asyncHandler(async function saveItem(req, res) {
 
   if (!name) {
     error(res, 400, 'Item name is required.');
+    return;
+  }
+
+  if (!validateDescription(res, description)) {
     return;
   }
 
@@ -540,13 +728,15 @@ router.post('/save_item', asyncHandler(async function saveItem(req, res) {
   }
 
   const itemResult = await db.query(
-    `INSERT INTO items (user_id, place_id, name, qr_string)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO items (user_id, place_id, name, description, qr_string)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (user_id, qr_string)
-     DO UPDATE SET place_id = EXCLUDED.place_id, name = EXCLUDED.name, updated_at = now()
-     RETURNING id, user_id, place_id, name, qr_string, photo_file, photo_mime, photo_original_name,
-               photo_size, photo_uploaded_at, created_at, updated_at`,
-    [user.id, resolvedPlaceId, name, qrString]
+     DO UPDATE SET place_id = EXCLUDED.place_id,
+                   name = EXCLUDED.name,
+                   description = EXCLUDED.description,
+                   updated_at = now()
+     RETURNING ${ITEM_COLUMNS}`,
+    [user.id, resolvedPlaceId, name, description, qrString]
   );
 
   res.json({
@@ -582,7 +772,7 @@ router.post('/upload_photo', upload.single('photo'), asyncHandler(async function
 
   const tableName = targetType === 'place' ? 'places' : 'items';
   const existingResult = await db.query(
-    `SELECT id, user_id, photo_file
+    `SELECT id, user_id
        FROM ${tableName}
       WHERE user_id = $1 AND id = $2
       LIMIT 1`,
@@ -601,30 +791,52 @@ router.post('/upload_photo', upload.single('photo'), asyncHandler(async function
 
   await fs.promises.writeFile(filePath, req.file.buffer);
 
-  let updatedResult;
   try {
-    updatedResult = await db.query(
+    await db.query(
+      `INSERT INTO entity_photos (
+         user_id, target_type, place_id, item_id, file_name, mime, original_name, size, uploaded_at, sort_order
+       )
+       VALUES (
+         $1, $2, $3, $4, $5, $6, $7, $8, now(),
+         COALESCE((
+           SELECT MAX(sort_order) + 1
+             FROM entity_photos
+            WHERE user_id = $1
+              AND target_type = $2
+              AND (($2 = 'place' AND place_id = $3) OR ($2 = 'item' AND item_id = $4))
+         ), 0)
+       )`,
+      [
+        user.id,
+        targetType,
+        targetType === 'place' ? targetId : null,
+        targetType === 'item' ? targetId : null,
+        fileName,
+        req.file.mimetype,
+        req.file.originalname,
+        req.file.size,
+      ]
+    );
+
+    await db.query(
       `UPDATE ${tableName}
-          SET photo_file = $1,
-              photo_mime = $2,
-              photo_original_name = $3,
-              photo_size = $4,
-              photo_uploaded_at = now(),
-              updated_at = now()
-        WHERE user_id = $5 AND id = $6
-        RETURNING id, user_id, ${targetType === 'place' ? '' : 'place_id,'}
-                  name, qr_string, photo_file, photo_mime, photo_original_name,
-                  photo_size, photo_uploaded_at, created_at, updated_at`,
-      [fileName, req.file.mimetype, req.file.originalname, req.file.size, user.id, targetId]
+          SET updated_at = now()
+        WHERE user_id = $1 AND id = $2`,
+      [user.id, targetId]
     );
   } catch (err) {
     await removePhotoFile(user.id, fileName);
     throw err;
   }
 
-  await removePhotoFile(user.id, existing.photo_file);
-
   if (targetType === 'place') {
+    const updatedResult = await db.query(
+      `SELECT ${PLACE_COLUMNS}
+         FROM places
+        WHERE user_id = $1 AND id = $2
+        LIMIT 1`,
+      [user.id, targetId]
+    );
     res.json({
       status: 'ok',
       result: true,
@@ -633,6 +845,13 @@ router.post('/upload_photo', upload.single('photo'), asyncHandler(async function
     return;
   }
 
+  const updatedResult = await db.query(
+    `SELECT ${ITEM_COLUMNS}
+       FROM items
+      WHERE user_id = $1 AND id = $2
+      LIMIT 1`,
+    [user.id, targetId]
+  );
   res.json({
     status: 'ok',
     result: true,
@@ -648,6 +867,7 @@ router.post('/delete_photo', asyncHandler(async function deletePhoto(req, res) {
 
   const targetType = cleanText(req.body.target_type);
   const targetId = Number(req.body.target_id || 0);
+  const photoId = Number(req.body.photo_id || 0);
 
   if (targetType !== 'place' && targetType !== 'item') {
     error(res, 400, 'target_type must be place or item.');
@@ -659,38 +879,52 @@ router.post('/delete_photo', asyncHandler(async function deletePhoto(req, res) {
     return;
   }
 
-  const tableName = targetType === 'place' ? 'places' : 'items';
-  const oldPhotoResult = await db.query(
-    `SELECT photo_file
-       FROM ${tableName}
-      WHERE user_id = $1 AND id = $2
-      LIMIT 1`,
-    [user.id, targetId]
-  );
-
-  const updatedResult = await db.query(
-    `UPDATE ${tableName}
-        SET photo_file = NULL,
-            photo_mime = NULL,
-            photo_original_name = NULL,
-            photo_size = NULL,
-            photo_uploaded_at = NULL,
-            updated_at = now()
-      WHERE user_id = $1 AND id = $2
-      RETURNING id, user_id, ${targetType === 'place' ? '' : 'place_id,'}
-                name, qr_string, photo_file, photo_mime, photo_original_name,
-                photo_size, photo_uploaded_at, created_at, updated_at`,
-    [user.id, targetId]
-  );
-
-  if (!updatedResult.rows[0]) {
-    error(res, 404, targetType === 'place' ? 'Place was not found.' : 'Item was not found.');
+  if (!photoId) {
+    error(res, 400, 'photo_id is required.');
     return;
   }
 
-  await removePhotoFile(user.id, oldPhotoResult.rows[0] && oldPhotoResult.rows[0].photo_file);
+  const idColumn = targetType === 'place' ? 'place_id' : 'item_id';
+  const photoResult = await db.query(
+    `SELECT ${PHOTO_COLUMNS}
+       FROM entity_photos
+      WHERE user_id = $1
+        AND target_type = $2
+        AND id = $3
+        AND ${idColumn} = $4
+      LIMIT 1`,
+    [user.id, targetType, photoId, targetId]
+  );
+  const photo = photoResult.rows[0];
+
+  if (!photo) {
+    error(res, 404, 'Photo was not found.');
+    return;
+  }
+
+  await db.query(
+    `DELETE FROM entity_photos
+      WHERE user_id = $1 AND id = $2`,
+    [user.id, photoId]
+  );
+  await removePhotoFile(user.id, photo.file_name);
+
+  const tableName = targetType === 'place' ? 'places' : 'items';
+  await db.query(
+    `UPDATE ${tableName}
+        SET updated_at = now()
+      WHERE user_id = $1 AND id = $2`,
+    [user.id, targetId]
+  );
 
   if (targetType === 'place') {
+    const updatedResult = await db.query(
+      `SELECT ${PLACE_COLUMNS}
+         FROM places
+        WHERE user_id = $1 AND id = $2
+        LIMIT 1`,
+      [user.id, targetId]
+    );
     res.json({
       status: 'ok',
       result: true,
@@ -699,6 +933,13 @@ router.post('/delete_photo', asyncHandler(async function deletePhoto(req, res) {
     return;
   }
 
+  const updatedResult = await db.query(
+    `SELECT ${ITEM_COLUMNS}
+       FROM items
+      WHERE user_id = $1 AND id = $2
+      LIMIT 1`,
+    [user.id, targetId]
+  );
   res.json({
     status: 'ok',
     result: true,
@@ -713,10 +954,16 @@ router.post('/delete_place', asyncHandler(async function deletePlace(req, res) {
   }
 
   const placeId = Number(req.body.place_id || 0);
+  const photosResult = await db.query(
+    `SELECT file_name
+       FROM entity_photos
+      WHERE user_id = $1 AND target_type = 'place' AND place_id = $2`,
+    [user.id, placeId]
+  );
   const result = await db.query(
     `DELETE FROM places
       WHERE user_id = $1 AND id = $2
-      RETURNING id, user_id, photo_file`,
+      RETURNING id, user_id`,
     [user.id, placeId]
   );
 
@@ -725,7 +972,9 @@ router.post('/delete_place', asyncHandler(async function deletePlace(req, res) {
     return;
   }
 
-  await removePhotoFile(user.id, result.rows[0].photo_file);
+  for (const row of photosResult.rows) {
+    await removePhotoFile(user.id, row.file_name);
+  }
   res.json({ status: 'ok', result: true });
 }));
 
@@ -736,10 +985,16 @@ router.post('/delete_item', asyncHandler(async function deleteItem(req, res) {
   }
 
   const itemId = Number(req.body.item_id || 0);
+  const photosResult = await db.query(
+    `SELECT file_name
+       FROM entity_photos
+      WHERE user_id = $1 AND target_type = 'item' AND item_id = $2`,
+    [user.id, itemId]
+  );
   const result = await db.query(
     `DELETE FROM items
       WHERE user_id = $1 AND id = $2
-      RETURNING id, user_id, photo_file`,
+      RETURNING id, user_id`,
     [user.id, itemId]
   );
 
@@ -748,7 +1003,9 @@ router.post('/delete_item', asyncHandler(async function deleteItem(req, res) {
     return;
   }
 
-  await removePhotoFile(user.id, result.rows[0].photo_file);
+  for (const row of photosResult.rows) {
+    await removePhotoFile(user.id, row.file_name);
+  }
   res.json({ status: 'ok', result: true });
 }));
 

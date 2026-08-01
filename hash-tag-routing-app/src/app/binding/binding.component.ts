@@ -17,6 +17,7 @@ import {MatFormFieldModule} from "@angular/material/form-field";
 import {FormControl, FormsModule, ReactiveFormsModule, Validators} from "@angular/forms";
 import {
   ApiItem,
+  ApiPhoto,
   ApiPlace,
   ApiResponse,
   ApiService,
@@ -51,7 +52,9 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   qrFormControl = new FormControl('', [Validators.required]);
   nameFormControl = new FormControl('', [Validators.required]);
+  descriptionFormControl = new FormControl('', [Validators.maxLength(250)]);
   placeFormControl = new FormControl<number | null>(null);
+  parentPlaceFormControl = new FormControl<number | null>(null);
 
   scanner: WideCodeScanner | null = null;
   scanOn = false;
@@ -127,12 +130,19 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
         if (response.found && response.place) {
           this.existingPlace = response.place;
           this.nameFormControl.setValue(response.place.name);
+          this.descriptionFormControl.setValue(response.place.description || '');
+          this.parentPlaceFormControl.setValue(response.place.parent_place_id);
         } else if (response.found && response.item) {
           this.existingItem = response.item;
           this.nameFormControl.setValue(response.item.name);
+          this.descriptionFormControl.setValue(response.item.description || '');
           this.placeFormControl.setValue(response.item.place_id);
         } else {
           this.nameFormControl.setValue('');
+          this.descriptionFormControl.setValue('');
+          if (this.mode === 'place') {
+            this.parentPlaceFormControl.setValue(null);
+          }
           if (this.mode === 'item') {
             this.placeFormControl.setValue(null);
           }
@@ -153,16 +163,27 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   savePlace() {
     this.nameFormControl.markAsTouched();
+    this.descriptionFormControl.markAsTouched();
     if (this.nameFormControl.invalid || !this.currentQr) {
       this.message = 'Введите название места.';
       return;
     }
+    if (this.descriptionFormControl.invalid) {
+      this.message = 'Описание должно быть не длиннее 250 символов.';
+      return;
+    }
 
     this.loading = true;
-    this.api.savePlace(this.currentQr, this.nameFormControl.getRawValue() || '').subscribe({
+    this.api.savePlace(
+      this.currentQr,
+      this.nameFormControl.getRawValue() || '',
+      this.descriptionFormControl.getRawValue() || '',
+      this.parentPlaceFormControl.getRawValue()
+    ).subscribe({
       next: (response: SavePlaceResponse) => {
         this.loading = false;
         this.existingPlace = response.place;
+        this.parentPlaceFormControl.setValue(response.place.parent_place_id);
         this.mode = 'place';
         this.message = 'Место сохранено.';
         this.loadPlaces();
@@ -176,8 +197,13 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   saveItem() {
     this.nameFormControl.markAsTouched();
+    this.descriptionFormControl.markAsTouched();
     if (this.nameFormControl.invalid || !this.currentQr) {
       this.message = 'Введите название вещи.';
+      return;
+    }
+    if (this.descriptionFormControl.invalid) {
+      this.message = 'Описание должно быть не длиннее 250 символов.';
       return;
     }
 
@@ -185,11 +211,13 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
     this.api.saveItem(
       this.currentQr,
       this.nameFormControl.getRawValue() || '',
+      this.descriptionFormControl.getRawValue() || '',
       this.placeFormControl.getRawValue()
     ).subscribe({
       next: (response: SaveItemResponse) => {
         this.loading = false;
         this.existingItem = response.item;
+        this.placeFormControl.setValue(response.item.place_id);
         this.mode = 'item';
         this.message = 'Вещь сохранена.';
       },
@@ -237,14 +265,14 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  deleteCurrentPhoto() {
+  deleteCurrentPhoto(photo: ApiPhoto) {
     const target = this.currentPhotoTarget();
     if (!target) {
       return;
     }
 
     this.message = 'Удаляю фото...';
-    this.api.deletePhoto(target.type, target.id).subscribe({
+    this.api.deletePhoto(target.type, target.id, photo.id).subscribe({
       next: (response) => {
         if (response.place) {
           this.existingPlace = response.place;
@@ -261,14 +289,14 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  currentPhotoUrl(): string {
-    if (this.mode === 'place' && this.existingPlace?.photo_url) {
-      return this.photoUrl(this.existingPlace.photo_url);
+  currentPhotos(): ApiPhoto[] {
+    if (this.mode === 'place') {
+      return this.existingPlace?.photos || [];
     }
-    if (this.mode === 'item' && this.existingItem?.photo_url) {
-      return this.photoUrl(this.existingItem.photo_url);
+    if (this.mode === 'item') {
+      return this.existingItem?.photos || [];
     }
-    return '';
+    return [];
   }
 
   private currentPhotoTarget(): { type: 'place' | 'item'; id: number } | null {
@@ -279,6 +307,47 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
       return { type: 'item', id: this.existingItem.id };
     }
     return null;
+  }
+
+  availableParentPlaces(): ApiPlace[] {
+    const currentId = this.existingPlace?.id || null;
+    if (!currentId) {
+      return this.places;
+    }
+
+    const descendantIds = new Set<number>();
+    const collectDescendants = (placeId: number) => {
+      this.places
+        .filter((place) => place.parent_place_id === placeId)
+        .forEach((place) => {
+          if (descendantIds.has(place.id)) {
+            return;
+          }
+          descendantIds.add(place.id);
+          collectDescendants(place.id);
+        });
+    };
+    collectDescendants(currentId);
+
+    return this.places.filter((place) => place.id !== currentId && !descendantIds.has(place.id));
+  }
+
+  placeOptionLabel(place: ApiPlace): string {
+    const names = [place.name];
+    const seenIds = new Set<number>([place.id]);
+    let parentId = place.parent_place_id;
+
+    while (parentId && !seenIds.has(parentId)) {
+      const parent = this.places.find((candidate) => candidate.id === parentId);
+      if (!parent) {
+        break;
+      }
+      names.unshift(parent.name);
+      seenIds.add(parent.id);
+      parentId = parent.parent_place_id;
+    }
+
+    return names.join(' / ');
   }
 
   startScan() {

@@ -71,6 +71,13 @@ h2 {
   margin-top: 4px;
 }
 
+.description {
+  color: #68736d;
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -110,8 +117,56 @@ code {
 .item-cell {
   min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
+}
+
+.item-title {
+  min-width: 0;
+}
+
+.photo-strip,
+.photo-mini-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.photo-strip {
+  width: 190px;
+  flex: 0 0 auto;
+}
+
+.photo-delete {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.photo-delete::after {
+  content: "×";
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 16px;
+  line-height: 1;
+  border: 1px solid #e2b8a4;
+}
+
+.photo-delete.mini {
+  border-radius: 6px;
 }
 
 .photo-thumb,
@@ -229,6 +284,10 @@ code {
 
   .row-actions {
     justify-content: flex-start;
+  }
+
+  .photo-strip {
+    width: 100%;
   }
 
   .put-away {

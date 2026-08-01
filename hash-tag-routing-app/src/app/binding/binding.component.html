@@ -46,20 +46,36 @@
       <input matInput placeholder="Шкаф в прихожей" [formControl]="nameFormControl">
     </mat-form-field>
 
+    <mat-form-field appearance="outline">
+      <mat-label>Описание</mat-label>
+      <textarea matInput rows="3" maxlength="250" placeholder="Что это за место, что обычно там лежит" [formControl]="descriptionFormControl"></textarea>
+      <mat-hint align="end">{{ descriptionFormControl.value?.length || 0 }}/250</mat-hint>
+    </mat-form-field>
+
+    <label class="select-label" for="parentPlaceSelect">Где находится это место</label>
+    <select id="parentPlaceSelect" [formControl]="parentPlaceFormControl">
+      <option [ngValue]="null">Верхний уровень / без родителя</option>
+      <option *ngFor="let place of availableParentPlaces()" [ngValue]="place.id">{{ placeOptionLabel(place) }}</option>
+    </select>
+
     <button mat-raised-button color="primary" type="button" (click)="savePlace()" [disabled]="loading">
       Сохранить место
     </button>
 
     <div class="photo-panel" *ngIf="existingPlace">
-      <img *ngIf="currentPhotoUrl()" [src]="currentPhotoUrl()" alt="Фото места">
+      <div class="photo-grid" *ngIf="currentPhotos().length > 0">
+        <figure class="photo-card" *ngFor="let photo of currentPhotos()">
+          <img [src]="photoUrl(photo.photo_url)" alt="Фото места">
+          <button mat-stroked-button color="warn" type="button" (click)="deleteCurrentPhoto(photo)">
+            Удалить
+          </button>
+        </figure>
+      </div>
       <div class="photo-actions">
         <label class="file-button">
-          {{ currentPhotoUrl() ? 'Заменить фото' : 'Добавить фото' }}
+          Добавить фото
           <input type="file" accept="image/*" capture="environment" (change)="uploadCurrentPhoto($event)">
         </label>
-        <button mat-stroked-button color="warn" type="button" *ngIf="currentPhotoUrl()" (click)="deleteCurrentPhoto()">
-          Удалить фото
-        </button>
       </div>
     </div>
 
@@ -90,10 +106,16 @@
       <input matInput placeholder="Ножницы" [formControl]="nameFormControl">
     </mat-form-field>
 
+    <mat-form-field appearance="outline">
+      <mat-label>Описание</mat-label>
+      <textarea matInput rows="3" maxlength="250" placeholder="Особенности, комплектация, серийный номер" [formControl]="descriptionFormControl"></textarea>
+      <mat-hint align="end">{{ descriptionFormControl.value?.length || 0 }}/250</mat-hint>
+    </mat-form-field>
+
     <label class="select-label" for="placeSelect">Где сейчас находится</label>
     <select id="placeSelect" [formControl]="placeFormControl">
       <option [ngValue]="null">Без места / на руках</option>
-      <option *ngFor="let place of places" [ngValue]="place.id">{{ place.name }}</option>
+      <option *ngFor="let place of places" [ngValue]="place.id">{{ placeOptionLabel(place) }}</option>
     </select>
 
     <p class="muted" *ngIf="existingItem">
@@ -108,15 +130,19 @@
     </button>
 
     <div class="photo-panel" *ngIf="existingItem">
-      <img *ngIf="currentPhotoUrl()" [src]="currentPhotoUrl()" alt="Фото вещи">
+      <div class="photo-grid" *ngIf="currentPhotos().length > 0">
+        <figure class="photo-card" *ngFor="let photo of currentPhotos()">
+          <img [src]="photoUrl(photo.photo_url)" alt="Фото вещи">
+          <button mat-stroked-button color="warn" type="button" (click)="deleteCurrentPhoto(photo)">
+            Удалить
+          </button>
+        </figure>
+      </div>
       <div class="photo-actions">
         <label class="file-button">
-          {{ currentPhotoUrl() ? 'Заменить фото' : 'Добавить фото' }}
+          Добавить фото
           <input type="file" accept="image/*" capture="environment" (change)="uploadCurrentPhoto($event)">
         </label>
-        <button mat-stroked-button color="warn" type="button" *ngIf="currentPhotoUrl()" (click)="deleteCurrentPhoto()">
-          Удалить фото
-        </button>
       </div>
     </div>
   </section>

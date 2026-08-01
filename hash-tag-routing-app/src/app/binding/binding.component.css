@@ -93,8 +93,7 @@ code {
 }
 
 .photo-panel {
-  display: flex;
-  align-items: center;
+  display: grid;
   gap: 14px;
   padding: 12px;
   border: 1px solid #edf0eb;
@@ -102,10 +101,21 @@ code {
   background: #f8faf7;
 }
 
-.photo-panel img {
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+  gap: 12px;
+}
+
+.photo-card {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.photo-card img {
   width: 116px;
   height: 116px;
-  flex: 0 0 auto;
   object-fit: cover;
   border: 1px solid #dfe4dc;
   border-radius: 8px;
@@ -181,6 +191,5 @@ th {
 
   .photo-panel {
     align-items: stretch;
-    flex-direction: column;
   }
 }

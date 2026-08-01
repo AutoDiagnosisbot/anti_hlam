@@ -1,18 +1,19 @@
 import { Component, OnInit } from '@angular/core';
 import {MenuComponent} from "../menu/menu.component";
-import {NgFor, NgIf} from "@angular/common";
-import {ApiItem, ApiPlace, ApiResponse, ApiService, FullListResponse} from "../services/api.service";
+import {NgFor, NgIf, NgTemplateOutlet} from "@angular/common";
+import {ApiItem, ApiPhoto, ApiPlace, ApiResponse, ApiService, FullListResponse} from "../services/api.service";
 import {FormsModule} from "@angular/forms";
 
 @Component({
   selector: 'app-list-items',
   standalone: true,
-  imports: [MenuComponent, NgFor, NgIf, FormsModule],
+  imports: [MenuComponent, NgFor, NgIf, NgTemplateOutlet, FormsModule],
   templateUrl: './list-items.component.html',
   styleUrl: './list-items.component.css'
 })
 export class ListItemsComponent implements OnInit {
   places: ApiPlace[] = [];
+  rootPlaces: ApiPlace[] = [];
   unplacedItems: ApiItem[] = [];
   selectedPlaceByItemId: Record<number, number | null> = {};
   loading = false;
@@ -34,6 +35,7 @@ export class ListItemsComponent implements OnInit {
         this.loading = false;
         if (response.status === 'ok') {
           this.places = response.places || [];
+          this.rootPlaces = response.rootPlaces || response.places || [];
           this.unplacedItems = response.unplacedItems || [];
           this.selectedPlaceByItemId = {};
           this.unplacedItems.forEach((item) => {
@@ -102,12 +104,30 @@ export class ListItemsComponent implements OnInit {
     this.uploadPhoto('item', item.id, event);
   }
 
-  deletePlacePhoto(place: ApiPlace) {
-    this.deletePhoto('place', place.id);
+  deletePlacePhoto(place: ApiPlace, photo: ApiPhoto) {
+    this.deletePhoto('place', place.id, photo.id);
   }
 
-  deleteItemPhoto(item: ApiItem) {
-    this.deletePhoto('item', item.id);
+  deleteItemPhoto(item: ApiItem, photo: ApiPhoto) {
+    this.deletePhoto('item', item.id, photo.id);
+  }
+
+  placeOptionLabel(place: ApiPlace): string {
+    const names = [place.name];
+    const seenIds = new Set<number>([place.id]);
+    let parentId = place.parent_place_id;
+
+    while (parentId && !seenIds.has(parentId)) {
+      const parent = this.places.find((candidate) => candidate.id === parentId);
+      if (!parent) {
+        break;
+      }
+      names.unshift(parent.name);
+      seenIds.add(parent.id);
+      parentId = parent.parent_place_id;
+    }
+
+    return names.join(' / ');
   }
 
   private uploadPhoto(targetType: 'place' | 'item', targetId: number, event: Event) {
@@ -131,9 +151,9 @@ export class ListItemsComponent implements OnInit {
     });
   }
 
-  private deletePhoto(targetType: 'place' | 'item', targetId: number) {
+  private deletePhoto(targetType: 'place' | 'item', targetId: number, photoId: number) {
     this.message = 'Удаляю фото...';
-    this.api.deletePhoto(targetType, targetId).subscribe({
+    this.api.deletePhoto(targetType, targetId, photoId).subscribe({
       next: () => {
         this.message = 'Фото удалено.';
         this.load(false);
@@ -146,7 +166,7 @@ export class ListItemsComponent implements OnInit {
 
   private saveItemLocation(item: ApiItem, placeId: number | null, successMessage: string) {
     this.message = 'Сохраняю место вещи...';
-    this.api.saveItem(item.qr_string, item.name, placeId).subscribe({
+    this.api.saveItem(item.qr_string, item.name, item.description || '', placeId).subscribe({
       next: () => {
         this.message = successMessage;
         this.load(false);

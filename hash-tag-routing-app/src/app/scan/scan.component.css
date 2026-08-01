@@ -34,6 +34,12 @@ h2 {
   font-size: 22px;
 }
 
+h3 {
+  margin: 0;
+  color: #202124;
+  font-size: 16px;
+}
+
 .toolbar p,
 .message,
 .muted {
@@ -83,11 +89,19 @@ h2 {
 
 .result-title {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
 }
 
-.result-title img {
+.photo-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 0 0 auto;
+  max-width: 260px;
+}
+
+.photo-strip img {
   width: 116px;
   height: 116px;
   flex: 0 0 auto;
@@ -95,6 +109,51 @@ h2 {
   border: 1px solid #dfe4dc;
   border-radius: 8px;
   background: #edf0eb;
+}
+
+.item-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.photo-mini {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border: 1px solid #dfe4dc;
+  border-radius: 6px;
+  background: #edf0eb;
+}
+
+.description {
+  margin-top: 4px;
+  color: #68736d;
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+
+.child-places {
+  display: grid;
+  gap: 8px;
+}
+
+.child-places ul {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.child-places li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid #edf0eb;
 }
 
 code {
