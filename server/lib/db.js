@@ -84,7 +84,6 @@ async function ensureSchema() {
     CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
     CREATE INDEX IF NOT EXISTS idx_places_user_id ON places(user_id);
-    CREATE INDEX IF NOT EXISTS idx_places_parent_place_id ON places(parent_place_id);
     CREATE INDEX IF NOT EXISTS idx_items_user_id ON items(user_id);
     CREATE INDEX IF NOT EXISTS idx_items_place_id ON items(place_id);
     CREATE INDEX IF NOT EXISTS idx_entity_photos_place_id ON entity_photos(place_id);
@@ -106,6 +105,8 @@ async function ensureSchema() {
     ALTER TABLE items ADD COLUMN IF NOT EXISTS photo_size INTEGER;
     ALTER TABLE items ADD COLUMN IF NOT EXISTS photo_uploaded_at TIMESTAMPTZ;
     ALTER TABLE items ALTER COLUMN place_id DROP NOT NULL;
+
+    CREATE INDEX IF NOT EXISTS idx_places_parent_place_id ON places(parent_place_id);
 
     DO $$
     BEGIN
