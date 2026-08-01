@@ -39,10 +39,38 @@
           </div>
           <div class="row-actions">
             <label class="file-button">
-              Фото
-              <input type="file" accept="image/*" capture="environment" (change)="uploadPlacePhoto(place, $event)">
+              Добавить фото
+              <input type="file" accept="image/*" capture="environment" multiple (change)="uploadPlacePhoto(place, $event)">
             </label>
+            <button class="secondary-button" type="button" (click)="startEditPlace(place)">Редактировать</button>
             <button class="danger-button" type="button" (click)="deletePlace(place)">Удалить</button>
+          </div>
+        </div>
+
+        <div class="edit-panel" *ngIf="editingPlaceId === place.id">
+          <div class="form-grid">
+            <label class="field">
+              <span>Название места</span>
+              <input type="text" maxlength="120" [(ngModel)]="placeDraft.name">
+            </label>
+            <label class="field">
+              <span>Где находится</span>
+              <select [(ngModel)]="placeDraft.parent_place_id">
+                <option [ngValue]="null">Верхний уровень / без родителя</option>
+                <option *ngFor="let parentPlace of availableParentPlaces(place)" [ngValue]="parentPlace.id">
+                  {{ placeOptionLabel(parentPlace) }}
+                </option>
+              </select>
+            </label>
+          </div>
+          <label class="field">
+            <span>Описание</span>
+            <textarea rows="3" maxlength="250" [(ngModel)]="placeDraft.description"></textarea>
+            <small>{{ placeDraft.description.length || 0 }}/250</small>
+          </label>
+          <div class="edit-actions">
+            <button class="secondary-button" type="button" (click)="cancelEditPlace()">Отмена</button>
+            <button class="primary-button" type="button" (click)="savePlace(place)">Сохранить</button>
           </div>
         </div>
 
@@ -55,7 +83,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let item of place.items">
+            <ng-container *ngFor="let item of place.items">
+            <tr>
               <td>
                 <div class="item-cell">
                   <div class="photo-mini-strip" *ngIf="item.photos.length > 0">
@@ -72,13 +101,45 @@
               <td><code>{{ item.qr_string }}</code></td>
               <td class="action-cell">
                 <label class="link-upload">
-                  Фото
-                  <input type="file" accept="image/*" capture="environment" (change)="uploadItemPhoto(item, $event)">
+                  Добавить фото
+                  <input type="file" accept="image/*" capture="environment" multiple (change)="uploadItemPhoto(item, $event)">
                 </label>
+                <button class="link-button neutral-link" type="button" (click)="startEditItem(item)">Редактировать</button>
                 <button class="link-button neutral-link" type="button" (click)="takeItem(item)">Взять</button>
                 <button class="link-button" type="button" (click)="deleteItem(item)">Удалить</button>
               </td>
             </tr>
+            <tr class="edit-row" *ngIf="editingItemId === item.id">
+              <td colspan="3">
+                <div class="edit-panel item-edit">
+                  <div class="form-grid">
+                    <label class="field">
+                      <span>Название вещи</span>
+                      <input type="text" maxlength="120" [(ngModel)]="itemDraft.name">
+                    </label>
+                    <label class="field">
+                      <span>Где находится</span>
+                      <select [(ngModel)]="itemDraft.place_id">
+                        <option [ngValue]="null">Без места / на руках</option>
+                        <option *ngFor="let placeOption of places" [ngValue]="placeOption.id">
+                          {{ placeOptionLabel(placeOption) }}
+                        </option>
+                      </select>
+                    </label>
+                  </div>
+                  <label class="field">
+                    <span>Описание</span>
+                    <textarea rows="3" maxlength="250" [(ngModel)]="itemDraft.description"></textarea>
+                    <small>{{ itemDraft.description.length || 0 }}/250</small>
+                  </label>
+                  <div class="edit-actions">
+                    <button class="secondary-button" type="button" (click)="cancelEditItem()">Отмена</button>
+                    <button class="primary-button" type="button" (click)="saveItem(item)">Сохранить</button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            </ng-container>
           </tbody>
         </table>
 
@@ -103,7 +164,8 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let item of unplacedItems">
+        <ng-container *ngFor="let item of unplacedItems">
+        <tr>
           <td>
             <div class="item-cell">
               <div class="photo-mini-strip" *ngIf="item.photos.length > 0">
@@ -129,12 +191,44 @@
               </button>
             </div>
             <label class="link-upload">
-              Фото
-              <input type="file" accept="image/*" capture="environment" (change)="uploadItemPhoto(item, $event)">
+              Добавить фото
+              <input type="file" accept="image/*" capture="environment" multiple (change)="uploadItemPhoto(item, $event)">
             </label>
+            <button class="link-button neutral-link" type="button" (click)="startEditItem(item)">Редактировать</button>
             <button class="link-button" type="button" (click)="deleteItem(item)">Удалить</button>
           </td>
         </tr>
+        <tr class="edit-row" *ngIf="editingItemId === item.id">
+          <td colspan="3">
+            <div class="edit-panel item-edit">
+              <div class="form-grid">
+                <label class="field">
+                  <span>Название вещи</span>
+                  <input type="text" maxlength="120" [(ngModel)]="itemDraft.name">
+                </label>
+                <label class="field">
+                  <span>Где находится</span>
+                  <select [(ngModel)]="itemDraft.place_id">
+                    <option [ngValue]="null">Без места / на руках</option>
+                    <option *ngFor="let placeOption of places" [ngValue]="placeOption.id">
+                      {{ placeOptionLabel(placeOption) }}
+                    </option>
+                  </select>
+                </label>
+              </div>
+              <label class="field">
+                <span>Описание</span>
+                <textarea rows="3" maxlength="250" [(ngModel)]="itemDraft.description"></textarea>
+                <small>{{ itemDraft.description.length || 0 }}/250</small>
+              </label>
+              <div class="edit-actions">
+                <button class="secondary-button" type="button" (click)="cancelEditItem()">Отмена</button>
+                <button class="primary-button" type="button" (click)="saveItem(item)">Сохранить</button>
+              </div>
+            </div>
+          </td>
+        </tr>
+        </ng-container>
       </tbody>
     </table>
   </section>

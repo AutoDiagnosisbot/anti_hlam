@@ -71,6 +71,65 @@ h2 {
   margin-top: 4px;
 }
 
+.edit-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+  border-top: 1px solid #edf0eb;
+  background: #fbfcfa;
+}
+
+.item-edit {
+  margin-bottom: 0;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  color: #68736d;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: 38px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #c8d0cb;
+  border-radius: 6px;
+  background: #fff;
+  color: #202124;
+  font: inherit;
+  font-weight: 400;
+}
+
+.field textarea {
+  resize: vertical;
+  line-height: 1.35;
+}
+
+.field small {
+  justify-self: end;
+  color: #9aa39e;
+  font-weight: 400;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .description {
   color: #68736d;
   font-size: 13px;
@@ -190,6 +249,7 @@ code {
 }
 
 .secondary-button,
+.primary-button,
 .danger-button,
 .link-button,
 .file-button,
@@ -198,6 +258,12 @@ code {
   padding: 0 12px;
   border-radius: 6px;
   cursor: pointer;
+}
+
+.primary-button {
+  border: 1px solid #2f7a65;
+  background: #2f7a65;
+  color: #fff;
 }
 
 .secondary-button {
@@ -288,6 +354,14 @@ code {
 
   .photo-strip {
     width: 100%;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .edit-actions {
+    justify-content: flex-start;
   }
 
   .put-away {

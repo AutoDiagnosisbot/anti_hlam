@@ -4,6 +4,18 @@ import {NgFor, NgIf, NgTemplateOutlet} from "@angular/common";
 import {ApiItem, ApiPhoto, ApiPlace, ApiResponse, ApiService, FullListResponse} from "../services/api.service";
 import {FormsModule} from "@angular/forms";
 
+type PlaceDraft = {
+  name: string;
+  description: string;
+  parent_place_id: number | null;
+};
+
+type ItemDraft = {
+  name: string;
+  description: string;
+  place_id: number | null;
+};
+
 @Component({
   selector: 'app-list-items',
   standalone: true,
@@ -16,6 +28,10 @@ export class ListItemsComponent implements OnInit {
   rootPlaces: ApiPlace[] = [];
   unplacedItems: ApiItem[] = [];
   selectedPlaceByItemId: Record<number, number | null> = {};
+  editingPlaceId: number | null = null;
+  editingItemId: number | null = null;
+  placeDraft: PlaceDraft = { name: '', description: '', parent_place_id: null };
+  itemDraft: ItemDraft = { name: '', description: '', place_id: null };
   loading = false;
   message = '';
 
@@ -65,6 +81,45 @@ export class ListItemsComponent implements OnInit {
     });
   }
 
+  startEditPlace(place: ApiPlace) {
+    this.editingItemId = null;
+    this.editingPlaceId = place.id;
+    this.placeDraft = {
+      name: place.name,
+      description: place.description || '',
+      parent_place_id: place.parent_place_id,
+    };
+  }
+
+  cancelEditPlace() {
+    this.editingPlaceId = null;
+  }
+
+  savePlace(place: ApiPlace) {
+    const name = this.placeDraft.name.trim();
+    const description = this.placeDraft.description || '';
+    if (!name) {
+      this.message = 'Введите название места.';
+      return;
+    }
+    if (description.length > 250) {
+      this.message = 'Описание должно быть не длиннее 250 символов.';
+      return;
+    }
+
+    this.message = 'Сохраняю место...';
+    this.api.savePlace(place.qr_string, name, description, this.placeDraft.parent_place_id).subscribe({
+      next: () => {
+        this.editingPlaceId = null;
+        this.message = 'Место обновлено.';
+        this.load(false);
+      },
+      error: (response: { error?: ApiResponse }) => {
+        this.message = response.error?.description || 'Не удалось сохранить место.';
+      },
+    });
+  }
+
   deleteItem(item: ApiItem) {
     if (!confirm(`Удалить вещь "${item.name}"?`)) {
       return;
@@ -74,6 +129,45 @@ export class ListItemsComponent implements OnInit {
       next: () => this.load(),
       error: (response: { error?: ApiResponse }) => {
         this.message = response.error?.description || 'Не удалось удалить вещь.';
+      },
+    });
+  }
+
+  startEditItem(item: ApiItem) {
+    this.editingPlaceId = null;
+    this.editingItemId = item.id;
+    this.itemDraft = {
+      name: item.name,
+      description: item.description || '',
+      place_id: item.place_id,
+    };
+  }
+
+  cancelEditItem() {
+    this.editingItemId = null;
+  }
+
+  saveItem(item: ApiItem) {
+    const name = this.itemDraft.name.trim();
+    const description = this.itemDraft.description || '';
+    if (!name) {
+      this.message = 'Введите название вещи.';
+      return;
+    }
+    if (description.length > 250) {
+      this.message = 'Описание должно быть не длиннее 250 символов.';
+      return;
+    }
+
+    this.message = 'Сохраняю вещь...';
+    this.api.saveItem(item.qr_string, name, description, this.itemDraft.place_id).subscribe({
+      next: () => {
+        this.editingItemId = null;
+        this.message = 'Вещь обновлена.';
+        this.load(false);
+      },
+      error: (response: { error?: ApiResponse }) => {
+        this.message = response.error?.description || 'Не удалось сохранить вещь.';
       },
     });
   }
@@ -97,11 +191,11 @@ export class ListItemsComponent implements OnInit {
   }
 
   uploadPlacePhoto(place: ApiPlace, event: Event) {
-    this.uploadPhoto('place', place.id, event);
+    this.uploadPhotos('place', place.id, event);
   }
 
   uploadItemPhoto(item: ApiItem, event: Event) {
-    this.uploadPhoto('item', item.id, event);
+    this.uploadPhotos('item', item.id, event);
   }
 
   deletePlacePhoto(place: ApiPlace, photo: ApiPhoto) {
@@ -130,25 +224,57 @@ export class ListItemsComponent implements OnInit {
     return names.join(' / ');
   }
 
-  private uploadPhoto(targetType: 'place' | 'item', targetId: number, event: Event) {
+  availableParentPlaces(currentPlace: ApiPlace): ApiPlace[] {
+    const blockedIds = new Set<number>([currentPlace.id]);
+    const collectDescendants = (placeId: number) => {
+      this.places
+        .filter((place) => place.parent_place_id === placeId)
+        .forEach((place) => {
+          if (blockedIds.has(place.id)) {
+            return;
+          }
+          blockedIds.add(place.id);
+          collectDescendants(place.id);
+        });
+    };
+    collectDescendants(currentPlace.id);
+
+    return this.places.filter((place) => !blockedIds.has(place.id));
+  }
+
+  private uploadPhotos(targetType: 'place' | 'item', targetId: number, event: Event) {
     const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
+    const files = Array.from(input.files || []);
     input.value = '';
 
-    if (!file) {
+    if (files.length === 0) {
       return;
     }
 
-    this.message = 'Загружаю фото...';
-    this.api.uploadPhoto(targetType, targetId, file).subscribe({
-      next: () => {
-        this.message = 'Фото сохранено.';
-        this.load(false);
-      },
-      error: (response: { error?: ApiResponse }) => {
-        this.message = response.error?.description || 'Не удалось загрузить фото.';
-      },
-    });
+    let uploaded = 0;
+    const uploadNext = () => {
+      this.message = files.length === 1
+        ? 'Загружаю фото...'
+        : `Загружаю фото ${uploaded + 1}/${files.length}...`;
+
+      this.api.uploadPhoto(targetType, targetId, files[uploaded]).subscribe({
+        next: () => {
+          uploaded += 1;
+          if (uploaded < files.length) {
+            uploadNext();
+            return;
+          }
+
+          this.message = files.length === 1 ? 'Фото сохранено.' : `Фото сохранены: ${files.length}.`;
+          this.load(false);
+        },
+        error: (response: { error?: ApiResponse }) => {
+          this.message = response.error?.description || 'Не удалось загрузить фото.';
+        },
+      });
+    };
+
+    uploadNext();
   }
 
   private deletePhoto(targetType: 'place' | 'item', targetId: number, photoId: number) {

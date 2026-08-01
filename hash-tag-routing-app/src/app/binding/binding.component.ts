@@ -234,10 +234,10 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   uploadCurrentPhoto(event: Event) {
     const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
+    const files = Array.from(input.files || []);
     input.value = '';
 
-    if (!file) {
+    if (files.length === 0) {
       return;
     }
 
@@ -247,22 +247,39 @@ export class BindingComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    this.message = 'Загружаю фото...';
-    this.api.uploadPhoto(target.type, target.id, file).subscribe({
-      next: (response) => {
-        if (response.place) {
-          this.existingPlace = response.place;
-          this.loadPlaces();
-        }
-        if (response.item) {
-          this.existingItem = response.item;
-        }
-        this.message = 'Фото сохранено.';
-      },
-      error: (response: { error?: ApiResponse }) => {
-        this.message = response.error?.description || 'Не удалось загрузить фото.';
-      },
-    });
+    let uploaded = 0;
+    const uploadNext = () => {
+      this.message = files.length === 1
+        ? 'Загружаю фото...'
+        : `Загружаю фото ${uploaded + 1}/${files.length}...`;
+
+      this.api.uploadPhoto(target.type, target.id, files[uploaded]).subscribe({
+        next: (response) => {
+          if (response.place) {
+            this.existingPlace = response.place;
+          }
+          if (response.item) {
+            this.existingItem = response.item;
+          }
+
+          uploaded += 1;
+          if (uploaded < files.length) {
+            uploadNext();
+            return;
+          }
+
+          if (response.place) {
+            this.loadPlaces();
+          }
+          this.message = files.length === 1 ? 'Фото сохранено.' : `Фото сохранены: ${files.length}.`;
+        },
+        error: (response: { error?: ApiResponse }) => {
+          this.message = response.error?.description || 'Не удалось загрузить фото.';
+        },
+      });
+    };
+
+    uploadNext();
   }
 
   deleteCurrentPhoto(photo: ApiPhoto) {
