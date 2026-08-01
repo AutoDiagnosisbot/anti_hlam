@@ -8,7 +8,7 @@ Root folder: `D:\projects\ifmo`
 
 Important folders:
 
-- `hash-tag-routing-app/` - Angular 17 frontend. This subfolder is its own Git repository.
+- `hash-tag-routing-app/` - Angular 17 frontend tracked by the workspace root Git repository.
 - `server/` - early Node/Express backend attempt.
 - `description.txt` - empty.
 - `test.js` - tiny JavaScript event-loop demo, not part of the app.
@@ -20,7 +20,8 @@ Current deployment target:
 - Host: `olegpc`
 - Path: `/home/oleg/anti_hlam`
 - Runtime: Docker Compose
-- App URL on the LAN: `http://192.168.0.131:8083`
+- Public app URL: `https://danechka.com:8083`
+- App URL on the LAN: `http://192.168.0.131:8083` when bypassing the HTTPS reverse proxy.
 
 ## Frontend
 
@@ -32,7 +33,7 @@ Stack:
 - Angular Material
 - PWA/service worker config
 - `angularx-qrcode` for QR generation
-- `qr-scanner` for QR scanning
+- ZXing through `WideCodeScanner` for QR, barcode, and Data Matrix scanning
 
 Useful commands:
 
@@ -66,8 +67,11 @@ Implementation notes:
 - `GeneratorComponent` creates printable batches of `place:*` and `item:*` QR strings.
 - `BindingComponent` can scan or manually accept QR payloads, detect places/items, and save them through the backend.
 - `place:*` remains reserved for places; items can use either `item:*` labels or arbitrary factory QR payloads.
-- `ListItemsComponent` loads the catalog from the backend and supports deleting places/items.
-- `ScanComponent` resolves a QR into a place/item lookup result.
+- Places and items have optional multiline descriptions, limited to 250 characters.
+- Places can be nested inside other places through `parent_place_id`.
+- Places and items can each have multiple photos; legacy `photo_url` fields still expose the first photo for compatibility.
+- `ListItemsComponent` loads the catalog tree from the backend and supports deleting places/items, moving items, and photo upload/removal.
+- `ScanComponent` resolves a QR into a place/item lookup result, including descriptions, photos, direct child places, and direct items.
 
 ## Backend
 
@@ -94,6 +98,7 @@ Current state:
 - `server/server.js` starts Express on `PORT` or `8083`.
 - The server exposes `/api/*` endpoints and serves the built Angular app from `hash-tag-routing-app/dist/hash-tag-routing-app/browser`.
 - The server creates the PostgreSQL schema on startup.
+- Schema additions are currently handled in startup SQL, including `places.parent_place_id`, `description` columns, and `entity_photos` for multi-photo attachments.
 - Docker Compose runs the app and PostgreSQL; the app is exposed on port `8083`.
 - Uploaded photos are stored in the Docker volume `anti_hlam_uploads` and served from `/uploads/...`.
 - The old `server/config/config.json` contains legacy secrets and is ignored by Git.
