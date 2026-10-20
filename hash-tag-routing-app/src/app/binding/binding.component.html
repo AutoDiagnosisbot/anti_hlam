@@ -63,14 +63,8 @@
     </button>
 
     <div class="photo-panel" *ngIf="existingPlace">
-      <div class="photo-grid" *ngIf="currentPhotos().length > 0">
-        <figure class="photo-card" *ngFor="let photo of currentPhotos()">
-          <img [src]="photoUrl(photo.photo_url)" alt="Фото места">
-          <button mat-stroked-button color="warn" type="button" (click)="deleteCurrentPhoto(photo)">
-            Удалить
-          </button>
-        </figure>
-      </div>
+      <app-photo-gallery [photos]="currentPhotos()" [label]="existingPlace.name" [removable]="true"
+        (remove)="deleteCurrentPhoto($event)"></app-photo-gallery>
       <div class="photo-actions">
         <label class="file-button">
           Добавить фото
@@ -130,14 +124,8 @@
     </button>
 
     <div class="photo-panel" *ngIf="existingItem">
-      <div class="photo-grid" *ngIf="currentPhotos().length > 0">
-        <figure class="photo-card" *ngFor="let photo of currentPhotos()">
-          <img [src]="photoUrl(photo.photo_url)" alt="Фото вещи">
-          <button mat-stroked-button color="warn" type="button" (click)="deleteCurrentPhoto(photo)">
-            Удалить
-          </button>
-        </figure>
-      </div>
+      <app-photo-gallery [photos]="currentPhotos()" [label]="existingItem.name" [removable]="true"
+        (remove)="deleteCurrentPhoto($event)"></app-photo-gallery>
       <div class="photo-actions">
         <label class="file-button">
           Добавить фото

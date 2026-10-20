@@ -119,5 +119,6 @@ Uploaded photos are stored in the Docker volume `anti_hlam_uploads` and served f
 - Bind `place:*` codes as places.
 - Bind `item:*` codes or factory QR codes as items and choose their place.
 - Factory item codes can be QR, Data Matrix, or common 1D barcodes such as EAN/UPC/Code 128.
-- Attach or replace photos from the binding screen or catalog.
+- Attach multiple photos from the binding screen or catalog and click a thumbnail to enlarge it.
+- A separate photo-delete button requires confirmation. Individual deleted photos retain their files and metadata for recovery (`entity_photos.deleted_at`).
 - Use the catalog and search screens to find items and places.

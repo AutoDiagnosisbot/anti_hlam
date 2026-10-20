@@ -196,58 +196,6 @@ code {
   flex: 0 0 auto;
 }
 
-.photo-delete {
-  position: relative;
-  display: inline-grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  cursor: pointer;
-}
-
-.photo-delete::after {
-  content: "×";
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 20px;
-  height: 20px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #fff7ed;
-  color: #9a3412;
-  font-size: 16px;
-  line-height: 1;
-  border: 1px solid #e2b8a4;
-}
-
-.photo-delete.mini {
-  border-radius: 6px;
-}
-
-.photo-thumb,
-.photo-mini {
-  flex: 0 0 auto;
-  object-fit: cover;
-  background: #edf0eb;
-  border: 1px solid #dfe4dc;
-}
-
-.photo-thumb {
-  width: 86px;
-  height: 86px;
-  border-radius: 8px;
-}
-
-.photo-mini {
-  width: 42px;
-  height: 42px;
-  border-radius: 6px;
-}
-
 .secondary-button,
 .primary-button,
 .danger-button,

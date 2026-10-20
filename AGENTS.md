@@ -72,6 +72,8 @@ Implementation notes:
 - Places and items have optional multiline descriptions, limited to 250 characters.
 - Places can be nested inside other places through `parent_place_id`.
 - Places and items can each have multiple photos; legacy `photo_url` fields still expose the first photo for compatibility.
+- `PhotoGalleryComponent` opens photos in a native dialog with navigation. Deleting uses a separate button and confirmation.
+- Individual photo deletion soft-deletes `entity_photos` via `deleted_at`; files and metadata are retained for recovery and excluded from API photo lists.
 - `ListItemsComponent` loads the catalog tree from the backend and supports inline editing of names/descriptions/locations, deleting places/items, moving items, and photo upload/removal.
 - `ScanComponent` resolves a QR into a place/item lookup result, including descriptions, photos, direct child places, and direct items.
 

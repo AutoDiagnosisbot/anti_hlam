@@ -1,0 +1,17 @@
+:host { display: block; min-width: 0; }
+.photos { display: flex; flex-wrap: wrap; gap: 8px; }
+.photo { display: grid; gap: 4px; width: 86px; }
+.thumbnail { padding: 0; width: 86px; height: 86px; border: 1px solid #dfe4dc; border-radius: 6px; background: #edf0eb; cursor: zoom-in; }
+.thumbnail img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 5px; }
+.compact .photo, .compact .thumbnail { width: 64px; }
+.compact .thumbnail { height: 64px; }
+.delete { justify-self: center; width: 44px; height: 36px; border: 0; border-radius: 4px; background: transparent; color: #a33131; cursor: pointer; }
+.delete:hover { background: #fff0f0; }
+dialog { box-sizing: border-box; width: min(1120px, calc(100vw - 24px)); max-width: calc(100vw - 24px); max-height: 94dvh; padding: 0; border: 0; border-radius: 6px; background: #171717; color: #fff; }
+dialog::backdrop { background: rgb(0 0 0 / 75%); }
+.viewer-toolbar { display: flex; align-items: center; gap: 6px; padding: 8px; }
+h2 { flex: 1; min-width: 0; margin: 0 8px; font-size: 16px; font-weight: 500; overflow-wrap: anywhere; }
+.counter { white-space: nowrap; font-size: 13px; }
+.viewer-button { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 4px; color: #fff; background: transparent; cursor: pointer; }
+.viewer-button:hover { background: #383838; }
+.full-photo { display: block; width: 100%; height: calc(88dvh - 64px); object-fit: contain; }

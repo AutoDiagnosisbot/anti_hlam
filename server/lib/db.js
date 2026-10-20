@@ -73,6 +73,7 @@ async function ensureSchema() {
       size INTEGER,
       uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       sort_order INTEGER NOT NULL DEFAULT 0,
+      deleted_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       CHECK (
         (target_type = 'place' AND place_id IS NOT NULL AND item_id IS NULL)
@@ -105,6 +106,7 @@ async function ensureSchema() {
     ALTER TABLE items ADD COLUMN IF NOT EXISTS photo_size INTEGER;
     ALTER TABLE items ADD COLUMN IF NOT EXISTS photo_uploaded_at TIMESTAMPTZ;
     ALTER TABLE items ALTER COLUMN place_id DROP NOT NULL;
+    ALTER TABLE entity_photos ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 
     CREATE INDEX IF NOT EXISTS idx_places_parent_place_id ON places(parent_place_id);
 

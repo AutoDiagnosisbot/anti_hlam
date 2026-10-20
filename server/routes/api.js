@@ -252,6 +252,7 @@ async function attachPhotos(userId, targetType, entities) {
        FROM entity_photos
       WHERE user_id = $1
         AND target_type = $2
+        AND deleted_at IS NULL
         AND ${idColumn} = ANY($3::int[])
       ORDER BY sort_order, id`,
     [userId, targetType, ids]
@@ -892,6 +893,7 @@ router.post('/delete_photo', asyncHandler(async function deletePhoto(req, res) {
         AND target_type = $2
         AND id = $3
         AND ${idColumn} = $4
+        AND deleted_at IS NULL
       LIMIT 1`,
     [user.id, targetType, photoId, targetId]
   );
@@ -903,11 +905,10 @@ router.post('/delete_photo', asyncHandler(async function deletePhoto(req, res) {
   }
 
   await db.query(
-    `DELETE FROM entity_photos
-      WHERE user_id = $1 AND id = $2`,
+    `UPDATE entity_photos SET deleted_at = now()
+      WHERE user_id = $1 AND id = $2 AND deleted_at IS NULL`,
     [user.id, photoId]
   );
-  await removePhotoFile(user.id, photo.file_name);
 
   const tableName = targetType === 'place' ? 'places' : 'items';
   await db.query(

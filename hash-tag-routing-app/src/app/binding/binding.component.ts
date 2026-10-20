@@ -27,6 +27,7 @@ import {
   SavePlaceResponse
 } from "../services/api.service";
 import {WideCodeCamera, WideCodeScanner} from "../services/wide-code-scanner";
+import {PhotoGalleryComponent} from '../photo-gallery/photo-gallery.component';
 
 type BindingMode = 'idle' | 'place' | 'item' | 'unknown';
 
@@ -41,7 +42,8 @@ type BindingMode = 'idle' | 'place' | 'item' | 'unknown';
     MatInputModule,
     MatFormFieldModule,
     FormsModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    PhotoGalleryComponent
   ],
   templateUrl: './binding.component.html',
   styleUrl: './binding.component.css',

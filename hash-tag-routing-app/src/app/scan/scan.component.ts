@@ -14,6 +14,7 @@ import {MatInputModule} from "@angular/material/input";
 import {FormControl, ReactiveFormsModule, Validators} from "@angular/forms";
 import {ApiResponse, ApiService, ResolveQrResponse} from "../services/api.service";
 import {WideCodeCamera, WideCodeScanner} from "../services/wide-code-scanner";
+import {PhotoGalleryComponent} from '../photo-gallery/photo-gallery.component';
 
 @Component({
   selector: 'app-scan',
@@ -25,7 +26,8 @@ import {WideCodeCamera, WideCodeScanner} from "../services/wide-code-scanner";
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    PhotoGalleryComponent
   ],
   templateUrl: './scan.component.html',
   styleUrl: './scan.component.css'

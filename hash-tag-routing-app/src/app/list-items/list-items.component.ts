@@ -3,6 +3,7 @@ import {MenuComponent} from "../menu/menu.component";
 import {NgFor, NgIf, NgTemplateOutlet} from "@angular/common";
 import {ApiItem, ApiPhoto, ApiPlace, ApiResponse, ApiService, FullListResponse} from "../services/api.service";
 import {FormsModule} from "@angular/forms";
+import {PhotoGalleryComponent} from '../photo-gallery/photo-gallery.component';
 
 type PlaceDraft = {
   name: string;
@@ -19,7 +20,7 @@ type ItemDraft = {
 @Component({
   selector: 'app-list-items',
   standalone: true,
-  imports: [MenuComponent, NgFor, NgIf, NgTemplateOutlet, FormsModule],
+  imports: [MenuComponent, NgFor, NgIf, NgTemplateOutlet, FormsModule, PhotoGalleryComponent],
   templateUrl: './list-items.component.html',
   styleUrl: './list-items.component.css'
 })

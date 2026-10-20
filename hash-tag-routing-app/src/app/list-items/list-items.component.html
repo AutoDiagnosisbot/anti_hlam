@@ -28,9 +28,8 @@
       <article class="place-row" [style.margin-left.px]="level * 18">
         <div class="place-head">
           <div class="photo-strip" *ngIf="place.photos.length > 0">
-            <button class="photo-delete" *ngFor="let photo of place.photos" type="button" (click)="deletePlacePhoto(place, photo)" title="Удалить фото">
-              <img class="photo-thumb" [src]="photoUrl(photo.photo_url)" alt="Фото места">
-            </button>
+            <app-photo-gallery [photos]="place.photos" [label]="place.name" [removable]="true"
+              (remove)="deletePlacePhoto(place, $event)"></app-photo-gallery>
           </div>
           <div class="place-title">
             <h2>{{ place.name }}</h2>
@@ -88,9 +87,8 @@
               <td>
                 <div class="item-cell">
                   <div class="photo-mini-strip" *ngIf="item.photos.length > 0">
-                    <button class="photo-delete mini" *ngFor="let photo of item.photos" type="button" (click)="deleteItemPhoto(item, photo)" title="Удалить фото">
-                      <img class="photo-mini" [src]="photoUrl(photo.photo_url)" alt="Фото вещи">
-                    </button>
+                    <app-photo-gallery [photos]="item.photos" [label]="item.name" [compact]="true" [removable]="true"
+                      (remove)="deleteItemPhoto(item, $event)"></app-photo-gallery>
                   </div>
                   <div class="item-title">
                     <span>{{ item.name }}</span>
@@ -169,9 +167,8 @@
           <td>
             <div class="item-cell">
               <div class="photo-mini-strip" *ngIf="item.photos.length > 0">
-                <button class="photo-delete mini" *ngFor="let photo of item.photos" type="button" (click)="deleteItemPhoto(item, photo)" title="Удалить фото">
-                  <img class="photo-mini" [src]="photoUrl(photo.photo_url)" alt="Фото вещи">
-                </button>
+                <app-photo-gallery [photos]="item.photos" [label]="item.name" [compact]="true" [removable]="true"
+                  (remove)="deleteItemPhoto(item, $event)"></app-photo-gallery>
               </div>
               <div class="item-title">
                 <span>{{ item.name }}</span>

@@ -1,0 +1,29 @@
+<div class="photos" [class.compact]="compact">
+  <div class="photo" *ngFor="let photo of photos; let index = index">
+    <button class="thumbnail" type="button" (click)="open(index)" title="Увеличить фото"
+      [attr.aria-label]="'Увеличить фото: ' + label">
+      <img [src]="photoUrl(photo)" [alt]="label" loading="lazy">
+    </button>
+    <button class="delete" type="button" *ngIf="removable" (click)="confirmRemove(photo)"
+      title="Удалить фото" [attr.aria-label]="'Удалить фото: ' + label">
+      <mat-icon>delete_outline</mat-icon>
+    </button>
+  </div>
+</div>
+
+<dialog #viewer (click)="closeOnBackdrop($event)" aria-label="Просмотр фотографии"
+  (keydown.arrowleft)="step(-1); $event.preventDefault()" (keydown.arrowright)="step(1); $event.preventDefault()"
+  (keydown.escape)="close(); $event.preventDefault()">
+  <div class="viewer-toolbar">
+    <h2>{{ label }}</h2>
+    <span class="counter" aria-live="polite">{{ selectedIndex + 1 }} / {{ photos.length }}</span>
+    <button class="viewer-button" type="button" *ngIf="photos.length > 1" (click)="step(-1)"
+      title="Предыдущее фото" aria-label="Предыдущее фото"><mat-icon>chevron_left</mat-icon></button>
+    <button class="viewer-button" type="button" *ngIf="photos.length > 1" (click)="step(1)"
+      title="Следующее фото" aria-label="Следующее фото"><mat-icon>chevron_right</mat-icon></button>
+    <button class="viewer-button" type="button" (click)="close()" title="Закрыть" aria-label="Закрыть просмотр">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+  <img class="full-photo" *ngIf="photos[selectedIndex] as photo" [src]="photoUrl(photo)" [alt]="label">
+</dialog>

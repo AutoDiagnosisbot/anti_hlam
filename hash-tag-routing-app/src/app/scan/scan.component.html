@@ -37,7 +37,7 @@
   <section class="result-panel" *ngIf="result && result.found && result.type === 'place' && result.place">
     <div class="result-title">
       <div class="photo-strip" *ngIf="result.place.photos.length > 0">
-        <img *ngFor="let photo of result.place.photos" [src]="photoUrl(photo.photo_url)" alt="Фото места">
+        <app-photo-gallery [photos]="result.place.photos" [label]="result.place.name"></app-photo-gallery>
       </div>
       <div>
         <h2>{{ result.place.name }}</h2>
@@ -57,7 +57,7 @@
         <tr *ngFor="let item of result.place.items">
           <td>
             <div class="item-cell">
-              <img class="photo-mini" *ngFor="let photo of item.photos" [src]="photoUrl(photo.photo_url)" alt="Фото вещи">
+              <app-photo-gallery [photos]="item.photos" [label]="item.name" [compact]="true"></app-photo-gallery>
               <div>
                 <span>{{ item.name }}</span>
                 <p class="description" *ngIf="item.description">{{ item.description }}</p>
@@ -84,7 +84,7 @@
   <section class="result-panel" *ngIf="result && result.found && result.type === 'item' && result.item">
     <div class="result-title">
       <div class="photo-strip" *ngIf="result.item.photos.length > 0">
-        <img *ngFor="let photo of result.item.photos" [src]="photoUrl(photo.photo_url)" alt="Фото вещи">
+        <app-photo-gallery [photos]="result.item.photos" [label]="result.item.name"></app-photo-gallery>
       </div>
       <div>
         <h2>{{ result.item.name }}</h2>
