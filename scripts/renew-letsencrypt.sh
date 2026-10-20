@@ -3,6 +3,11 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+if ! docker compose --profile https ps --status running --services nginx | grep -qx nginx; then
+  echo "HTTPS nginx is not running; skipping certificate renewal."
+  exit 0
+fi
+
 if [ -f .env ]; then
   set -a
   # shellcheck disable=SC1091

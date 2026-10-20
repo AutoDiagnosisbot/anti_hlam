@@ -20,8 +20,10 @@ Current deployment target:
 - Host: `olegpc`
 - Path: `/home/oleg/anti_hlam`
 - Runtime: Docker Compose
-- Public app URL: `https://danechka.com:8083`
-- App URL on the LAN: `http://192.168.0.131:8083` when bypassing the HTTPS reverse proxy.
+- Current mode: temporary plain HTTP without a domain, app published directly on port `8083`.
+- App URL on the LAN: `http://192.168.0.109:8083` (check the host IP if DHCP changes it).
+- Run `bash scripts/use-http.sh` to rebuild and switch from HTTPS; it backs up `.env` and stops nginx.
+- HTTPS settings and certificates for `danechka.com` are preserved for switching back; certificate renewal skips runs while nginx is stopped.
 
 ## Frontend
 

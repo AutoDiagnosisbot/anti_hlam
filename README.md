@@ -23,7 +23,24 @@ docker compose logs -f app
 docker compose restart app
 ```
 
-The app is exposed on port `8083`.
+The current deployment temporarily uses plain HTTP without a domain at
+`http://192.168.0.109:8083`. Use the host's current IP if its LAN address changes.
+
+To switch an existing HTTPS deployment to HTTP on port `8083` and rebuild the app:
+
+```bash
+cd /home/oleg/anti_hlam
+bash scripts/use-http.sh
+```
+
+The script backs up `.env` to `.env.before-http.<timestamp>`, sets
+`APP_HTTP_BIND=8083`, stops nginx, and starts the app and PostgreSQL. Existing
+database and photo volumes are kept. Scheduled certificate renewal skips runs
+while nginx is stopped.
+
+To return to the existing HTTPS setup, set `APP_HTTP_BIND=127.0.0.1:18083` in
+`.env` and run `docker compose --profile https up -d app nginx`. The saved domain
+and certificate settings remain available; renew the certificate if it expired.
 
 Camera scanning on mobile browsers requires a secure context. `http://192.168...`
 works for the app UI, but camera access needs `https://...` or a browser-specific
